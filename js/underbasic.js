@@ -30,7 +30,7 @@ const UnderBasic = (new (function() {
   this.getVarType = (name, extended) =>
     name.match(/^[A-Z]$/) ? 'number' :
     name.match(/^Str[0-9]$/) ? 'string' :
-    name.match(/^L[A-Z0-9]{1, 6}$/) ? 'list' :
+    name.match(/^L[A-Z0-9]{1,6}$/) ? 'list' :
     name.match(/^\[[A-Z]\]$/) ? 'matrix' :
     name.match(/^Y[0-9]$/) ? 'yvar' :
     name.match(/^Pic[0-9]$/) ? 'picture' :
