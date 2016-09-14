@@ -236,6 +236,34 @@ const UnderBasic = (new (function() {
     * @returns {object}
     */
   this.compile = (code) => {
+    /**
+      * Format a content using built variables
+      * @param {string} content
+      * @returns {string} formatted
+      */
+    function format(content) {
+      // The output string
+      let out = '';
+      // Characters passed since the beginning
+      let passed = 0;
+      // Split by space, ignoring spaces between quotes
+      let parts = content.match(/\w+|"(?:\\"|[^"])+"/g);
+
+      // For each part...
+      for(let part of parts) {
+        // If that's a part NOT between quotes
+        if(!part.startsWith('"'))
+          // Format it
+          out += (passed ? content.charAt(passed - 1) : '')
+              +  part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] : word);
+
+        passed += part.length + 1;
+      }
+
+      // Return the formatted string
+      return out;
+    }
+
     // Split code into lines
     let lines = code.split('\n');
     // Number of the line
@@ -244,6 +272,10 @@ const UnderBasic = (new (function() {
     let functions = {};
     // Declared variables
     let variables = {};
+    // Aliases (linked to variables)
+    let aliases = {};
+    // Used aliases (for variables)
+    let used = { real: 0, str: 0, list: 0, matrix: 0, yvar: 0, pic: 0, gdb: 0 };
     // Output
     let output = [];
     // A temporary variable for storing regex matches
@@ -285,6 +317,80 @@ const UnderBasic = (new (function() {
 
         // Set the variable
         variables[match[2]] = type;
+
+        // Allocate a new alias for it, depending of its type
+        // Here the 'var' keyword is used because the 'let' one makes the
+        // 'alias' variable unaccessible from the 'switch' block.
+        var alias;
+        // Error message when no alias can be used
+        let msg = 'The maximum number of aliases for type "${type}" has been reached (${max})';
+        // The TI alphabet (used for aliases)
+        let alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        // Depending on the type...
+        switch(type) {
+          case 'number':
+            // If all numbers were used...
+            if(used.real === 26)
+              return error(msg, {type, max: 26});
+
+            // Increase the number of used aliases
+            used.real ++;
+            // Allocate the new one
+            alias = alphabet.charAt(used.real - 1);
+            break;
+
+          case 'string':
+            if(used.str === 10)
+              return error(msg, {type, max: 10});
+
+            used.str ++;
+            alias = (used.str - 1).toString(); // 0, 1, 2, 3...
+            break;
+
+          case 'list':
+            if(used.list === 6)
+              return error(msg, {type, max: 6});
+
+            used.list ++;
+            alias = 'L' + used.list.toString(); // L1, L2...
+            break;
+
+          case 'matrix':
+            if(used.matrix === 26)
+              return error(msg, {type, max: 10});
+
+            used.matrix ++;
+            alias = '[' + alphabet.charAt(used.matrix - 1) + ']';
+            break;
+
+          case 'yvar':
+            if(used.yvar === 10)
+              return error(msg, {type, max: 10});
+
+            used.yvar ++;
+            alias = 'Y' + (used.yvar - 1).toString(); // 0, 1, 2, 3...
+            break;
+
+          case 'picture':
+            if(used.pic === 10)
+              return error(msg, {type, max: 10});
+
+            used.pic ++;
+            alias = 'Pic' + (used.pic - 1).toString(); // 0, 1, 2, 3...
+            break;
+
+          case 'gdb':
+            if(used.gdb === 10)
+              return error(msg, {type, max: 10});
+
+            used.gdb ++;
+            alias = 'GDB' + (used.gdb - 1).toString(); // 0, 1, 2, 3...
+            break;
+        }
+
+        // Allocate the new alias
+        aliases[match[2]] = alias;
       }
       // If that's an assignment...
       else if(match = line.match(/^([a-zA-Z0-9_]+) *= *(.*)$/)) {
@@ -304,7 +410,7 @@ const UnderBasic = (new (function() {
           return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] });
 
         // Output
-        output.push(match[2] + '->' + match[1]);
+        output.push(match[2] + '->' + format(match[1]));
       }
       // If the syntax is not valid...
       else
@@ -317,7 +423,8 @@ const UnderBasic = (new (function() {
       content: output.join('\n'), // Join the lines
       // Build trash
       vars: variables,
-      func: functions
+      func: functions,
+      aliases
     };
   };
 
