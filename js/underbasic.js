@@ -22,6 +22,28 @@ const UnderBasic = (new (function() {
   const short_extended_types = [ "prog", "appv", "group", "app" ];
 
   /**
+    * Get the type of a variable from it's name
+    * @param {string} name
+    * @param {boolean} [extended] Allow extended types
+    * @returns {string|void} type Nothing if the type is unknown
+    */
+  this.getVarType = (name, extended) =>
+    name.match(/^[A-Z]$/) ? 'number' :
+    name.match(/^Str[0-9]$/) ? 'string' :
+    name.match(/^L[A-Z0-9]{1, 6}$/) ? 'list' :
+    name.match(/^\[[A-Z]\]$/) ? 'matrix' :
+    name.match(/^Y[0-9]$/) ? 'yvar' :
+    name.match(/^Pic[0-9]$/) ? 'picture' :
+    name.match(/^GDB[0-9]$/) ? 'gdb' :
+    // Extended types
+    extended ?
+    name.match(/^prgm[A-Z0-9]{1,8}$/) ? 'program' :
+    name.match(/^appv[A-Z0-9]{1,8}$/) ? 'appvar' :
+    name.match(/^group[A-Z0-9]{1,8}$/) ? 'group' :
+    name.match(/^app[A-Z0-9]{1,8}$/) ? 'application' :
+    null : null;
+
+  /**
     * Compile a source code
     * @param {string} code
     * @returns {object}
