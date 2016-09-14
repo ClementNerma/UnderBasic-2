@@ -14,6 +14,13 @@ const UnderBasic = (new (function() {
     * @type {array} */
   const short_types = [ "num", "str", "list", "matrix", "yvar", "pic", "gdb" ];
 
+  /** The extended types
+    * @type {array} */
+  const extended_types = [ "program", "appvar", "group", "application" ];
+  /** Their short name
+    * @type {array} */
+  const short_extended_types = [ "prog", "appv", "group", "app" ];
+
   /**
     * Compile a source code
     * @param {string} code
