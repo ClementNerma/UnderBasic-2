@@ -101,7 +101,18 @@ const UnderBasic = (new (function() {
       return 'list';
     }
 
-    // NOTE: Matrix support will come after the implementation of .parseMatrix()
+    // Matrix detected
+    if(content.match(/^\[(.*)\]$/)) {
+      // The parsed matrix
+      let matrix = this.parseMatrix(content);
+
+      // If an error occured during the parsing...
+      if(!Array.isArray(matrix))
+        return matrix;
+
+      // That's a valid matrix
+      return 'matrix';
+    }
   };
 
   /**
