@@ -93,7 +93,7 @@ const UnderBasic = (new (function() {
       // For each item...
       for(let item of list)
         // If that's not a number...
-        if(this.getType(item, extended, variables))
+        if(this.getType(item, extended, variables) !== 'number')
           // Failed
           return error('All items in a list must be numbers');
 
