@@ -17,6 +17,35 @@ function filesClickEvent() {
   });
 }
 
+/**
+  * Split sentences into multiples lines due to their long length
+  * @param {string} sentence
+  * @param {number} width Maximum width of a line
+  * @returns {string}
+  */
+function splitLines(sentence, width) {
+  var rows = [];
+  var maxlen = width;
+  var arr = sentence.split(" ");
+  var currow = arr[0];
+  var rowlen = currow.length;
+  for (var i = 1; i < arr.length; i++) {
+      var word = arr[i];
+      rowlen += word.length + 1;
+      if (rowlen <= maxlen) {
+          currow += " " + word;
+      } else {
+          rows.push(currow);
+          currow = word;
+          rowlen = word.length;
+      }
+  }
+
+  rows.push(currow);
+  return rows.join('\n');
+}
+
+// Is the local storage supported on this browser ?
 let localStorageSupport = (typeof localStorage !== 'undefined'),
   autoSaved,
   currentFile = 'main',
@@ -54,9 +83,21 @@ editor.on('change', (codemirror, change) => {
   }
 
   let comp = UnderBasic.compile(code, files), mode = comp.failed ? 'text' : 'basic';
+
   $('#result').css('border-color', comp.failed ? 'red' : 'lightgray');
-  if(result.options.mode !== mode) result.setOption('mode', mode);
-  result.setValue(comp.content);
+
+  if(result.options.mode !== mode)
+    result.setOption('mode', mode);
+
+  result.setValue(
+    // Error output
+    comp.failed ?
+      // Split the message by lines with a maximum width
+      splitLines(comp.content, Math.floor((document.getElementById('result').clientWidth || 459) / 7.65)) :
+      // Normal output :
+      // Display as it
+      comp.content
+  );
 
   console.log(comp);
 });
