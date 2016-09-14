@@ -254,8 +254,35 @@ const UnderBasic = (new (function() {
         // Ignore it
         continue ;
 
-      // Syntax error
-      return error('Syntax error');
+      // If that's a variable declaration...
+      if(match = line.match(/^([a-zA-Z]+) +([a-zA-Z0-9_]+)$/)) {
+        // If this variable was already defined...
+        if(variables.hasOwnProperty(match[2]))
+          return error('Variable "${name}" is already defined', { name: match[2] });
+
+        // If that's a function's name...
+        if(functions.hasOwnProperty(match[2]))
+          return error('Name "${name}" is already used for a function', { name: match[2] });
+
+        // Get the type as lower-cased (case insensitive)
+        let type = match[1].toLowerCase();
+
+        // If that's a shorten type...
+        if(short_types.includes(type))
+          // Make it the real one
+          type = types[short_types.indexOf(type)];
+        else
+          // If that's not a known type...
+          if(!types.includes(type))
+            return error('Unknown type "${type}"', { type });
+
+        // Set the variable
+        variables[match[2]] = type;
+      }
+      // If the syntax is not valid...
+      else
+        // Syntax error
+        return error('Syntax error');
     }
 
     // Success !
