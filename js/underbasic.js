@@ -228,6 +228,43 @@ const UnderBasic = (new (function() {
     * @param {string} code
     * @returns {object}
     */
-  this.compile = (code) => { return { failed: true, content: 'Compiler is not made !' }; };
+  this.compile = (code) => {
+    // Split code into lines
+    let lines = code.split('\n');
+    // Number of the line
+    let row = 0;
+    // Declared functions
+    let functions = {};
+    // Declared variables
+    let variables = {};
+    // Output
+    let output = [];
+    // A temporary variable for storing regex matches
+    let match;
+
+    // For each line in the code...
+    for(let line of lines) {
+      // Increase the row...
+      row ++;
+      // Trim the line
+      // Remove a potential ';' symbol at the end of the line
+      line = line.trim().replace(/;+$/, '');
+      // If the line is empty...
+      if(!line.length)
+        // Ignore it
+        continue ;
+
+      // Syntax error
+      return error('Syntax error');
+    }
+
+    // Success !
+    return {
+      content: output.join('\n'), // Join the lines
+      // Build trash
+      vars: variables,
+      func: functions
+    };
+  };
 
 })());
