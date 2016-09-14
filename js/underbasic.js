@@ -286,6 +286,26 @@ const UnderBasic = (new (function() {
         // Set the variable
         variables[match[2]] = type;
       }
+      // If that's an assignment...
+      else if(match = line.match(/^([a-zA-Z0-9_]+) *= *(.*)$/)) {
+        // If the assigned variable is not defined...
+        if(!variables.hasOwnProperty(match[1]))
+          return error('Variable "${name}" is not defined', { name: match[1] });
+
+        // The variable's type
+        let type = this.getType(match[2]);
+
+        // If this type is not known...
+        if(!type)
+          return error('Unknown type given');
+
+        // If that's not the same type as the variable...
+        if(type !== variables[match[1]])
+          return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] });
+
+        // Output
+        output.push(match[2] + '->' + match[1]);
+      }
       // If the syntax is not valid...
       else
         // Syntax error
