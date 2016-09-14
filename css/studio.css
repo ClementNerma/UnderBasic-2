@@ -1,0 +1,55 @@
+
+body {
+    font-family: Ubuntu, Open Sans, sans-serif;
+}
+
+#files {
+    position: absolute;
+    top: 10px;
+    height: 30px;
+    left: 10px;
+    right: 10px;
+    background-color: #F7F7F7;
+    border: 1px solid lightgray;
+}
+
+#files div {
+    display: inline-block;
+    height: 20px;
+    padding: 5px;
+}
+
+#files .file {
+    border-right: 1px solid lightgray;
+}
+
+#files .menu {
+    float: right;
+    border-left: 1px solid lightgray;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+#files div:hover {
+    cursor: pointer;
+    background-color: white;
+}
+
+#group {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+}
+
+#group > div {
+    display: inline-block;
+    width: 48%;
+    border: 1px solid lightgray;
+}
+
+.CodeMirror {
+  border: 1px solid #eee;
+  height: 500px;
+}
