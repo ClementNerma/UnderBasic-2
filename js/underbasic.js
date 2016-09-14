@@ -1,6 +1,12 @@
 "use strict";
 
 /**
+  * The UnderBasic library
+  * @type {object}
+  */
+let UBL = {};
+
+/**
   * UnderBasic interface
   * @type {UnderBasic}
   */
@@ -30,6 +36,7 @@ const UnderBasic = (new (function() {
   /** The extended types
     * @type {array} */
   const extended_types = [ "program", "appvar", "group", "application" ];
+
   /** Their short name
     * @type {array} */
   const short_extended_types = [ "prog", "appv", "group", "app" ];
@@ -292,6 +299,12 @@ const UnderBasic = (new (function() {
       vars: variables,
       func: functions
     };
+  };
+
+  // Export data into the library
+  UBL = {
+    types, short_types, extended_types, short_extended_types,
+    allTypes: types.concat(short_types).concat(extended_types).concat(short_extended_types)
   };
 
 })());
