@@ -6,6 +6,19 @@
   */
 const UnderBasic = (new (function() {
 
+  /**
+    * Return an error object
+    * @param {string} message
+    * @param {object} [params]
+    * @returns {object}
+    */
+  function error(message, params = {}) {
+    return {
+      failed: true,
+      content: message.replace(/\$\{([a-zA-Z0-9_]+)\}/g, (match, name) => params[name])
+    };
+  }
+
   /** The known types
     * @type {array} */
   const types = [ "number", "string", "list", "matrix", "yvar", "picture", "gdb" ];
