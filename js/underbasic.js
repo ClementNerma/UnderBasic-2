@@ -57,6 +57,54 @@ const UnderBasic = (new (function() {
     null : null;
 
   /**
+    * Get the type of a given content
+    * @param {string} content
+    * @param {boolean} [extended] Allow extended types
+    * @param {object} [variables] Search through a set of variables
+    * @returns {string|object} type Error object if the type is unknown
+    */
+  this.getType = (content, extended, variables = {}) => {
+    // Type get using @getVarType
+    let type = this.getVarType(content, extended);
+    // If the type was detected...
+    if(type)
+      // Return it
+      return type;
+
+    // If that's a variable...
+    if(variables.hasOwnProperty(content))
+      // Return its type
+      return variables[content];
+
+    // Finally, consider this content as a plain one and search its type.
+
+    // Number detected
+    if(content.match(/^[0-9]+(\.[0-9]+|)$/))
+      return 'number';
+
+    // String detected
+    if(content.match(/^"([^"]*)"$/))
+      return 'string';
+
+    // List detected
+    if(content.match(/^{.*}$/)) {
+      // Split the list into its items
+      let list = content.split(',');
+      // For each item...
+      for(let item of list)
+        // If that's not a number...
+        if(this.getType(item, extended, variables))
+          // Failed
+          return error('All items in a list must be numbers');
+
+      // That's a valid list
+      return 'list';
+    }
+
+    // NOTE: Matrix support will come after the implementation of .parseMatrix()
+  };
+
+  /**
     * Compile a source code
     * @param {string} code
     * @returns {object}
