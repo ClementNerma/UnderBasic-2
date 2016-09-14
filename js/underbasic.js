@@ -105,6 +105,114 @@ const UnderBasic = (new (function() {
   };
 
   /**
+    * Parse a plain matrix to an bi-dimensionnal array
+    * @param {string} content
+    * @param {object} [variables] The scope's variables
+    * @returns {array|object} matrix Object is an error occured
+    */
+  this.parseMatrix = (content, variables) => {
+    // If the opening bracket is missing...
+    if(!content.startsWith('['))
+      return error('Missing opening bracket for matrix');
+
+    // If the closing bracket is missing...
+    if(!content.endsWith(']'))
+      return error('Missing closing bracket for matrix');
+
+    // The parsed matrix
+    let matrix = [];
+    // Is there a row opened ?
+    let inRow = false;
+    // The item's buffer
+    let buff = '';
+    // The matrix's width
+    let width = null;
+
+    // For each char in the matrix... (excepted the opening and closing bracket)
+    for(let char of content.substr(1, content.length - 2)) {
+      // If that's a space...
+      if(char === ' ')
+        // Ignore it
+        continue ;
+
+      // Opening bracket
+      if(char === '[') {
+        // If we're already in a row...
+        if(inRow)
+          return error('Can\'t open a row into another');
+
+        // Mark a new row
+        inRow = true;
+        // Add a new row to the matrix
+        matrix.push([]);
+      }
+
+      // Closing bracket
+      else if(char === ']') {
+        // If we're not in a row...
+        if(!inRow)
+          return error('Can\'t close a row if no one is opened...');
+
+        // If no number was specified here...
+        if(!buff.length)
+          return error('No number specified before the row\'s end');
+
+        // If the buffer is not a number...
+        if(!this.getType(buff, variables))
+          return error('All matrix\'s items must be numbers');
+
+        // Push the item to the collection
+        matrix[matrix.length - 1].push(buff);
+
+        // Mark the end of the row
+        inRow = false;
+        // Reset the buffer
+        buff = '';
+
+        // If the width was not set...
+        if(!width)
+          // Set it
+          width = matrix[matrix.length - 1].length;
+        else
+          // If the row's width isn't the matrix's one...
+          if(matrix[matrix.length - 1].length !== width)
+            return error('All rows must have the same length (${width}) in the matrix', { width });
+      }
+
+      // If a row is closed...
+      else if(!inRow)
+        return error('Can\'t put any char between matrix\'s rows');
+
+      // Separator symbol
+      else if(char === ',') {
+        // If no number was specified here...
+        if(!buff.length)
+          return error('No number specified before the separator');
+
+        // If the buffer is not a number...
+        if(!this.getType(buff, variables))
+          return error('All matrix\'s items must be numbers');
+
+        // Push the item to the collection
+        matrix[matrix.length - 1].push(buff);
+        // Reset the buffer
+        buff = '';
+      }
+
+      // Any other symbol
+      else
+        // Append the char to the buffer
+        buff += char;
+    }
+
+    // If a row was opened and not closd...
+    if(inRow)
+      return error('Missing closing bracket for the last row');
+
+    return matrix;
+  };
+
+  /**
     * Compile a source code
     * @param {string} code
     * @returns {object}
