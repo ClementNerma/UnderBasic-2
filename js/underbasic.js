@@ -659,6 +659,9 @@ const UnderBasic = (new (function() {
         // Position at the buffer's beginning
         let bl = - /* negative value */ (buff.length + 1 /* we're at the operator char, next to the buffer */);
 
+        if(i === expr.length && !buff)
+          return _e('Missing something here', -2);
+
         if(!buff)
           return _e('Missing number before operator', bl);
 
