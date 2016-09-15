@@ -15,11 +15,11 @@
     return new RegExp("^((" + words.join(")|(") + "))\\b");
   }
 
-  var wordOperators = wordRegexp(["and", "or", "not", "is"]);
-  // Keywords
-  var commonKeywords = UBL.allTypes;
-  // Native variables, functions
-  var commonBuiltins = [ "answer" ];
+  var wordOperators  = wordRegexp(["and", "or", "not", "is"]);
+  
+  var commonKeywords = UBL.keywords;
+  var commonBuiltins = UBL.builtins;
+
   CodeMirror.registerHelper("hintWords", "python", commonKeywords.concat(commonBuiltins));
 
   function top(state) {
