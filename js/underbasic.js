@@ -681,6 +681,11 @@ const UnderBasic = (new (function() {
 
           let col = functionColumn, index = 0;
 
+          // If some arguments are missing...
+          if(callBuffs.length < callfunc.length)
+            return _e('Missing ' + (callfunc.length - callBuffs.length) + ' arguments', -1 /* strangely the -1 is needed here... bug ? */);
+
+          // For each argument given...
           for(let buff of callBuffs) {
             get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
             index ++;
@@ -696,7 +701,9 @@ const UnderBasic = (new (function() {
             col += buff.length + 1;
           }
 
+            // Add a new part
           parts.push({ function: functionCall, arguments: callBuffs });
+          // Reset variables
           functionCall = null;
           buffInt      = '$' + (++$);
           buffLetter   = '';
@@ -891,7 +898,7 @@ const UnderBasic = (new (function() {
 
     numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
 
-    let ret = {numbers: numbers.slice(0, numbers.length - 2), parts: parts};
+    let ret = { numbers: numbers.slice(0, numbers.length - 2), parts };
     if(strExp)
       ret.type = 'string';
     else if(staticType)
