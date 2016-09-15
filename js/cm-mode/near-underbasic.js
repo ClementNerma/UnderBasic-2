@@ -16,17 +16,17 @@
   }
 
   var wordOperators  = wordRegexp(["and", "or", "not", "is"]);
-  
+
   var commonKeywords = UBL.keywords;
   var commonBuiltins = UBL.builtins;
 
-  CodeMirror.registerHelper("hintWords", "python", commonKeywords.concat(commonBuiltins));
+  CodeMirror.registerHelper("hintWords", "underbasic", commonKeywords.concat(commonBuiltins));
 
   function top(state) {
     return state.scopes[state.scopes.length - 1];
   }
 
-  CodeMirror.defineMode("python", function(conf, parserConf) {
+  CodeMirror.defineMode("underbasic", function(conf, parserConf) {
     var ERRORCLASS = "error";
 
     var singleDelimiters = parserConf.singleDelimiters || /^[\(\)\[\]\{\}@,:`=;\.]/;
@@ -314,12 +314,12 @@
     return external;
   });
 
-  CodeMirror.defineMIME("text/x-python", "python");
+  CodeMirror.defineMIME("text/x-underbasic", "underbasic");
 
   var words = function(str) { return str.split(" "); };
 
   CodeMirror.defineMIME("text/x-cython", {
-    name: "python",
+    name: "underbasic",
     extra_keywords: words("by cdef cimport cpdef ctypedef enum except"+
                           "extern gil include nogil property public"+
                           "readonly struct union DEF IF ELIF ELSE")

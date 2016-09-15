@@ -68,7 +68,7 @@ let editor = CodeMirror($('#editor').get(0), {
   styleActiveLine: true,
   lineNumbers: true,
   indentUnit: 2,
-  mode: 'python'
+  mode: 'underbasic'
 });
 
 let result = CodeMirror($('#result').get(0), {
@@ -109,7 +109,7 @@ editor.on('change', (codemirror, change) => {
       comp.content
   );
 
-  console.log(comp);
+  // console.log(comp);
 });
 
 if(localStorageSupport && (autoSaved = localStorage.getItem('__underbasic_autosave'))) {
