@@ -572,8 +572,8 @@ const UnderBasic = (new (function() {
     }
 
     let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
-    let char, p_buff = '', p_count = 0, buffLetter = '', functionCall = null, functionIndex = 0, callBuffs = [], j,
-        buffString = '', stringOpened = false, i = 0;
+    let char, p_buff = '', p_count = 0, buffLetter = '', functionCall = null, callfunc = null, functionIndex = 0,
+        callBuffs = [], j, buffString = '', stringOpened = false, i = 0, functionColumn;
 
     expr += '+';
 
@@ -594,8 +594,19 @@ const UnderBasic = (new (function() {
           return _e('Opening parenthesis just after a string');
 
         if(buffLetter) {
-          functionCall  = buffLetter;
-          functionIndex = p_count + 1;
+          if(!UBL.functions.hasOwnProperty(buffLetter))
+            return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
+
+          if(UBL.functions[buffLetter][0] === 'string' && numExp)
+            return _e('Strings are not allowed in numeric expressions', bl);
+
+          if(UBL.functions[buffLetter][0] === 'number' && strExp)
+            return _e('Numbers are not allowed in string expressions', bl);
+
+          functionCall   = buffLetter;
+          functionColumn = i;
+          callfunc       = UBL.functions[buffLetter].slice(1);
+          functionIndex  = p_count + 1;
         }
 
         if(!p_count)
@@ -610,21 +621,20 @@ const UnderBasic = (new (function() {
           if(p_buff) // Fix a bug when script calls a function without any argument
             callBuffs.push(p_buff);
 
-          let i = 0;
+          let col = functionColumn, index = 0;
 
           for(let buff of callBuffs) {
-            get = this.parse(buff, extended, variables, undefined, undefined, expr, ++i - p_buff.length);
+            get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
+            index ++;
 
             if(get.failed)
               return get;
 
-            if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
-              // Optimization
-              buff = get.numbers[0];
-            else {
-              buff = '$' + (++$);
-              parts.push(!get.parts.length ? get.numbers : get);
-            }
+            // If that's not the type we expect for...
+            if(callfunc[index - 1] !== (get.strExp ? 'string' : 'number'))
+              return _e('Bad type for argument ' + index, col - i + (buff.match(/^ +/) || [''])[0].length);
+
+            col += buff.length + 1;
           }
 
           parts.push({ function: functionCall, arguments: callBuffs });
@@ -662,6 +672,13 @@ const UnderBasic = (new (function() {
             return _e('No content between parenthesis', -2);
         }
       } else if(functionCall && char === ',') {
+        // If there is already the same number of arguments in the call and in
+        // the function's declaration... (in fact we're checking for the right
+        // number of arguments LESS 1, because there is still one argument
+        // after the ',' separator)
+        if(callBuffs.length === callfunc.length - 1)
+          return _e('Too many arguments, function "' + functionCall + '" needs only ' + callfunc.length + ' arguments', -1);
+
         callBuffs.push(p_buff);
         p_buff = '';
         continue ;
@@ -683,8 +700,12 @@ const UnderBasic = (new (function() {
         continue ;
       }
 
-      if(char === ' ')
+      if(char === ' ') {
+        if(functionCall)
+          p_buff += ' ';
+
         continue ;
+      }
 
       if('+-*/'.indexOf(char) !== -1) {
         // It's an operator
@@ -823,13 +844,16 @@ const UnderBasic = (new (function() {
               "Y0", "Y1", "Y2", "Y3", "Y4", "Y5", "Y6", "Y7", "Y8", "Y9",
               "L1", "L2", "L3", "L4", "L5", "L6",
               "theta", "answer", "u", "v", "w", "n" ]),
-    // and functions
-    functions: [ "length", "dim" ],
     instructions: [ "exit", "stop" ]
+  };
+
+  // ... and functions
+  UBL.functions = {
+    dim: ['number', 'number', 'number']
   };
 
   // Keywords
   UBL.keywords = UBL.allTypes;
-  UBL.builtins = UBL.functions.concat(UBL.instructions);
+  UBL.builtins = Reflect.ownKeys(UBL.functions).concat(UBL.instructions);
 
 })());
