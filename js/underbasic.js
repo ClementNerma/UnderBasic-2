@@ -824,10 +824,12 @@ const UnderBasic = (new (function() {
               "L1", "L2", "L3", "L4", "L5", "L6",
               "theta", "answer", "u", "v", "w", "n" ]),
     // and functions
-    builtins: [ "length", "dim", "exit", "stop" ]
+    functions: [ "length", "dim" ],
+    instructions: [ "exit", "stop" ]
   };
 
   // Keywords
   UBL.keywords = UBL.allTypes;
+  UBL.builtins = UBL.functions.concat(UBL.instructions);
 
 })());
