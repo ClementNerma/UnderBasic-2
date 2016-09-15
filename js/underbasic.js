@@ -15,11 +15,22 @@ const UnderBasic = (new (function() {
   /**
     * Return an error object
     * @param {string} message
-    * @param {object} [params]
+    * @param {object|number} [params] Parameters or column number
+    * @param {number} [column]
     * @returns {object}
     */
-  function error(message, params = {}) {
+  function _error(message, params = {}, column = 0) {
+    // If the parameters argument is a number...
+    if(typeof params === 'number') {
+      // Set it as the column
+      column = params;
+      // And clean the parameters
+      params = {};
+    }
+
+    // Return the error
     return {
+      column: column,
       failed: true,
       content: message.replace(/\$\{([a-zA-Z0-9_]+)\}/g, (match, name) => params[name])
     };
@@ -40,6 +51,10 @@ const UnderBasic = (new (function() {
   /** Their short name
     * @type {array} */
   const short_extended_types = [ "prog", "appv", "group", "app" ];
+
+  /** The errors width
+    * @type {number} */
+  let errorWidth = 20;
 
   /**
     * Get the type of a variable from it's name
@@ -98,11 +113,12 @@ const UnderBasic = (new (function() {
       // Split the list into its items
       let list = content.split(',');
       // For each item...
-      for(let item of list)
+      for(let i = 0; i < list.length; i++) {
         // If that's not a number...
-        if(this.getType(item, extended, variables) !== 'number')
+        if(this.getType(list[i], extended, variables) !== 'number')
           // Failed
-          return error('All items in a list must be numbers');
+          return _error('All items in a list must be numbers', list.slice(0, i).length);
+      }
 
       // That's a valid list
       return 'list';
@@ -131,11 +147,11 @@ const UnderBasic = (new (function() {
   this.parseMatrix = (content, variables) => {
     // If the opening bracket is missing...
     if(!content.startsWith('['))
-      return error('Missing opening bracket for matrix');
+      return _error('Missing opening bracket for matrix');
 
     // If the closing bracket is missing...
     if(!content.endsWith(']'))
-      return error('Missing closing bracket for matrix');
+      return _error('Missing closing bracket for matrix', content.length - 1);
 
     // The parsed matrix
     let matrix = [];
@@ -145,19 +161,27 @@ const UnderBasic = (new (function() {
     let buff = '';
     // The matrix's width
     let width = null;
+    // The current column
+    let col = 0;
 
     // For each char in the matrix... (excepted the opening and closing bracket)
     for(let char of content.substr(1, content.length - 2)) {
+      // Increase the column
+      col ++;
+
       // If that's a space...
-      if(char === ' ')
+      if(char === ' ') {
+        // Append it to the buffer (needed for errors position)
+        buff += ' ';
         // Ignore it
         continue ;
+      }
 
       // Opening bracket
       if(char === '[') {
         // If we're already in a row...
         if(inRow)
-          return error('Can\'t open a row into another');
+          return _error('Can\'t open a row into another', col);
 
         // Mark a new row
         inRow = true;
@@ -169,15 +193,15 @@ const UnderBasic = (new (function() {
       else if(char === ']') {
         // If we're not in a row...
         if(!inRow)
-          return error('Can\'t close a row if no one is opened...');
+          return _error('Can\'t close a row if no one is opened...', col);
 
         // If no number was specified here...
         if(!buff.length)
-          return error('No number specified before the row\'s end');
+          return _error('No number specified before the row\'s end', col);
 
         // If the buffer is not a number...
-        if(!this.getType(buff, variables))
-          return error('All matrix\'s items must be numbers');
+        if(!this.getType(buff.trim(), variables))
+          return _error('All matrix\'s items must be numbers', col - buff.replace(/^ +/, '').length);
 
         // Push the item to the collection
         matrix[matrix.length - 1].push(buff);
@@ -194,22 +218,22 @@ const UnderBasic = (new (function() {
         else
           // If the row's width isn't the matrix's one...
           if(matrix[matrix.length - 1].length !== width)
-            return error('All rows must have the same length (${width}) in the matrix', { width });
+            return _error('All rows must have the same length (${width}) in the matrix', { width }, col);
       }
 
       // If a row is closed...
       else if(!inRow)
-        return error('Can\'t put any char between matrix\'s rows');
+        return _error('Can\'t put any char between matrix\'s rows', col);
 
       // Separator symbol
       else if(char === ',') {
         // If no number was specified here...
         if(!buff.length)
-          return error('No number specified before the separator');
+          return _error('No number specified before the separator', col);
 
         // If the buffer is not a number...
         if(!this.getType(buff, variables))
-          return error('All matrix\'s items must be numbers');
+          return _error('All matrix\'s items must be numbers', col - buff.length);
 
         // Push the item to the collection
         matrix[matrix.length - 1].push(buff);
@@ -225,7 +249,7 @@ const UnderBasic = (new (function() {
 
     // If a row was opened and not closd...
     if(inRow)
-      return error('Missing closing bracket for the last row');
+      return _error('Missing closing bracket for the last row', col + 1);
 
     return matrix;
   };
@@ -264,6 +288,39 @@ const UnderBasic = (new (function() {
       return out;
     }
 
+    /**
+      * Return an error object
+      * @param {string} message
+      * @param {object|number} [params] Parameters or column number
+      * @param {number} [column]
+      * @returns {object}
+      */
+    function error(message, params, column) {
+      return formatError(_error(message, params, column));
+    }
+
+    /**
+      * Format an error object to be compatible with compiler's context
+      * @param {object} error
+      * @param {number} [inc_col] Increase the column index
+      * @returns {object} error
+      */
+    function formatError(obj, inc_col = 0) {
+      // Increase the column index
+      obj.column += inc_col;
+
+      // === Set the message with debugging ===
+      // Define the part to display
+      let part = line.substr(obj.column < errorWidth ? 0 : obj.column - errorWidth, 2 * errorWidth + 1);
+      // Define the cursor's position
+      let cursor = obj.column < errorWidth ? obj.column : errorWidth;
+      // Set the new message
+      obj.content = `ERROR : At column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
+
+      // Return the final error object
+      return obj;
+    }
+
     // Split code into lines
     let lines = code.split('\n');
     // Number of the line
@@ -278,11 +335,13 @@ const UnderBasic = (new (function() {
     let used = { real: 0, str: 0, list: 0, matrix: 0, yvar: 0, pic: 0, gdb: 0 };
     // Output
     let output = [];
+    // The current line's content (must be global to be read by formatError)
+    let line;
     // A temporary variable for storing regex matches
     let match;
 
     // For each line in the code...
-    for(let line of lines) {
+    for(line of lines) {
       // Increase the row...
       row ++;
       // Trim the line
@@ -294,14 +353,14 @@ const UnderBasic = (new (function() {
         continue ;
 
       // If that's a variable declaration...
-      if(match = line.match(/^([a-zA-Z]+) +([a-zA-Z0-9_]+)$/)) {
+      if(match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)$/)) {
         // If this variable was already defined...
-        if(variables.hasOwnProperty(match[2]))
-          return error('Variable "${name}" is already defined', { name: match[2] });
+        if(variables.hasOwnProperty(match[3]))
+          return error('Variable "${name}" is already defined', { name: match[3] }, match[1].length + match[2].length);
 
         // If that's a function's name...
-        if(functions.hasOwnProperty(match[2]))
-          return error('Name "${name}" is already used for a function', { name: match[2] });
+        if(functions.hasOwnProperty(match[3]))
+          return error('Name "${name}" is already used for a function', { name: match[3] }, match[1].length + match[2].length);
 
         // Get the type as lower-cased (case insensitive)
         let type = match[1].toLowerCase();
@@ -316,7 +375,7 @@ const UnderBasic = (new (function() {
             return error('Unknown type "${type}"', { type });
 
         // Set the variable
-        variables[match[2]] = type;
+        variables[match[3]] = type;
 
         // Allocate a new alias for it, depending of its type
         // Here the 'var' keyword is used because the 'let' one makes the
@@ -390,27 +449,27 @@ const UnderBasic = (new (function() {
         }
 
         // Allocate the new alias
-        aliases[match[2]] = alias;
+        aliases[match[3]] = alias;
       }
       // If that's an assignment...
-      else if(match = line.match(/^([a-zA-Z0-9_]+) *= *(.*)$/)) {
+      else if(match = line.match(/^([a-zA-Z0-9_]+)( *)=( *)(.*)$/)) {
         // If the assigned variable is not defined...
         if(!variables.hasOwnProperty(match[1]))
           return error('Variable "${name}" is not defined', { name: match[1] });
 
         // The variable's type
-        let type = this.getType(match[2]);
+        let type = this.getType(match[4]);
 
         // If this type is not known...
         if(typeof type === 'object')
-          return type;
+          return formatError(type, match[1].length + match[2].length + match[3].length + 1);
 
         // If that's not the same type as the variable...
         if(type !== variables[match[1]])
-          return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] });
+          return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] }, match[1].length + match[2].length + match[3].length + 1);
 
         // Output
-        output.push(match[2] + '->' + format(match[1]));
+        output.push(match[4] + '->' + format(match[1]));
       }
       // If the syntax is not valid...
       else
