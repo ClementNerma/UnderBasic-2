@@ -363,7 +363,7 @@ const UnderBasic = (new (function() {
     // Declared functions
     let functions = {};
     // Declared variables
-    let variables = {};
+    let variables = { theta: 'number' };
     // Aliases (linked to variables)
     let aliases = {};
     // Used aliases (for variables)
@@ -487,24 +487,48 @@ const UnderBasic = (new (function() {
         aliases[match[3]] = alias;
       }
       // If that's an assignment...
-      else if(match = line.match(/^([a-zA-Z0-9_]+)( *)=( *)(.*)$/)) {
+      else if(match = line.match(/^([a-zA-Z0-9_]+)( *)(\+|\-|\*|\/|)( *)=( *)(.*)$/)) {
         // If the assigned variable is not defined...
         if(!variables.hasOwnProperty(match[1]))
           return error('Variable "${name}" is not defined', { name: match[1] });
 
+        // The content's position in the string
+        let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
         // The variable's type
-        let type = this.getType(match[4], null, variables);
+        let type = this.getType(match[6], null, variables);
 
         // If this type is not known...
         if(typeof type === 'object')
-          return formatError(type, match[1].length + match[2].length + match[3].length + 1);
+          return formatError(type, pos);
 
         // If that's not the same type as the variable...
         if(type !== variables[match[1]])
-          return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] }, match[1].length + match[2].length + match[3].length + 1);
+          return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] }, pos);
+
+        // If the operator is '+' and is not supported...
+        if(match[3] === '+' && !(['number', 'string']).includes(type))
+          return error('Operator "${op}" is not supported by type "${type}"', { op: '+', type });
+
+        // If the operator is '-' and is not supported...
+        if(match[3] === '-' && type !== 'number')
+          return error('Operator "${op}" is not supported by type "${type}"', { op: '-', type });
+
+        // If the operator is '+' and is not supported...
+        if(match[3] === '*' && type !== 'number')
+          return error('Operator "${op}" is not supported by type "${type}"', { op: '*', type });
+
+        // If the operator is '+' and is not supported...
+        if(match[3] === '/' && type !== 'number')
+          return error('Operator "${op}" is not supported by type "${type}"', { op: '/', type });
+
+        // If there is an operator...
+        if(match[3])
+          // Change the content
+          match[6] = aliases[match[1]] + match[3] + (match[6].match(/\+|\-|\*|\//) && match[3] !== '+' ? '(' + match[6] + ')' : match[6]);
+          /* looking for an operator, if there is one content must be between parenthesis. The '+' operator doesn't need a parenthesis */
 
         // Output
-        output.push(rmspace(match[4]) + '->' + format(match[1]));
+        output.push(rmspace(match[6]) + '->' + format(match[1]));
       }
       // If the syntax is not valid...
       else
