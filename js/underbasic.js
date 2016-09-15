@@ -112,9 +112,10 @@ const UnderBasic = (new (function() {
       return 'string';
 
     // List detected
-    if(content.match(/^{.*}$/)) {
+    let match;
+    if(match = content.match(/^{(.*)}$/)) {
       // Split the list into its items
-      let list = content.split(',');
+      let list = match[1].split(',');
       // For each item...
       for(let i = 0; i < list.length; i++) {
         // If that's not a number...
