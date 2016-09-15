@@ -162,6 +162,41 @@ const UnderBasic = (new (function() {
   };
 
   /**
+    * Check if a content matches with a specific type (NOTE: Extended mode is forced)
+    * @param {string} content
+    * @param {string} parent
+    * @param {object} [variables] variables OR parsed expression
+    * @returns {boolean} working
+    */
+  this.match = (content, parent, variables) => {
+    // Get type
+    let type = this.getVarType(content, true, variables);
+    // If a type was found...
+    if(type) // We know that the content is a pointer
+      return (parent.endsWith('*') ? type === parent.substr(0, parent.length - 1) : type === parent);
+
+    // Now we know that's not a pointer, so, if the expected type is a pointer...
+    if(parent.endsWith('*'))
+      // Return false
+      return false;
+
+    // If the given variables is an expression object...
+    if(variables && variables.hasOwnProperty('failed'))
+      // Check the type
+      return !variables.failed && variables.type === parent;
+
+    // Parse the content
+    let parse = this.parse(content);
+    // If an error occured...
+    if(parse.failed)
+      // Failed !
+      return false;
+
+    // Here we have a successfully parsed content, we check its type...
+    return (parse.type === parent);
+  };
+
+  /**
     * Parse a plain matrix to an bi-dimensionnal array
     * @param {string} content
     * @param {object} [variables] The scope's variables
