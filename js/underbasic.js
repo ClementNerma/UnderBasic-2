@@ -493,7 +493,7 @@ const UnderBasic = (new (function() {
           return error('Variable "${name}" is not defined', { name: match[1] });
 
         // The variable's type
-        let type = this.getType(match[4]);
+        let type = this.getType(match[4], null, variables);
 
         // If this type is not known...
         if(typeof type === 'object')
