@@ -402,8 +402,8 @@ const UnderBasic = (new (function() {
         let type = this.getType(match[2]);
 
         // If this type is not known...
-        if(!type)
-          return error('Unknown type given');
+        if(typeof type === 'object')
+          return type;
 
         // If that's not the same type as the variable...
         if(type !== variables[match[1]])
