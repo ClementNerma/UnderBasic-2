@@ -136,6 +136,9 @@ const UnderBasic = (new (function() {
       // That's a valid matrix
       return 'matrix';
     }
+
+    // Unknown type
+    return _error('Syntax error : Unknown content type');
   };
 
   /**
