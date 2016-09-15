@@ -490,6 +490,258 @@ const UnderBasic = (new (function() {
     };
   };
 
+  /**
+    * Parse an expression
+    * @param {string} expr
+    * @param {boolean} [extended]
+    * @param {object} [variables]
+    * @param {boolean} [strict] If set to true, will not allow empty integer parts (e.g. ".5"). Default: false
+    * @returns {object} parsed
+    */
+  this.parse = (expr, extended = false, variables = {}, strict, numExp, strExp, fullExpr, startI) => {
+    function _e(msg, add = 0) {
+      return { failed: true, message: msg, content: i + (startI || -1) + 1 + add }; // 'i' starts from 0
+    }
+
+    let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
+    let char, p_buff = '', p_count = 0, buffLetter = '', functionCall = null, functionIndex = 0, callBuffs = [], j,
+        buffString = '', stringOpened = false, i = 0;
+
+    expr += '+';
+
+    for(let char of expr) {
+      i++;
+
+      if(char === '(') {
+        if(p_count) {
+          p_count += 1;
+          p_buff  += '(';
+          continue ;
+        }
+
+        if(buffInt || buffDec)
+          return _e('Opening parenthesis just after a number');
+
+        if(buffString)
+          return _e('Opening parenthesis just after a string');
+
+        if(buffLetter) {
+          functionCall  = buffLetter;
+          functionIndex = p_count + 1;
+        }
+
+        if(!p_count)
+          p_buff = '';
+
+        p_count += 1;
+
+        if(p_count === 1)
+          continue ;
+      } else if(char === ')') {
+        if(functionCall && p_count === functionIndex) {
+          if(p_buff) // Fix a bug when script calls a function without any argument
+            callBuffs.push(p_buff);
+
+          let i = 0;
+
+          for(let buff of callBuffs) {
+            get = this.parse(buff, extended, variables, strict, undefined, undefined, expr, ++i - p_buff.length);
+
+            if(get instanceof Error)
+              return get;
+
+            if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
+              // Optimization
+              buff = get.numbers[0];
+            else {
+              buff = '$' + (++$);
+              parts.push(!get.parts.length ? get.numbers : get);
+            }
+          }
+
+          parts.push({ function: functionCall, arguments: callBuffs });
+          functionCall = null;
+          buffInt      = '$' + (++$);
+          buffLetter   = '';
+          floating     = false;
+          p_count     -= 1;
+          continue ;
+        }
+
+        if(!p_count)
+          return _e('No parenthesis is opened');
+
+        p_count -= 1;
+
+        if(!p_count) {
+          if(p_buff) {
+            // parse content
+            get = this.parse(p_buff, extended, variables, strict, numExp, strExp, expr, i - p_buff.length);
+
+            if(get instanceof Error)
+              return get;
+
+            if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
+              // Optimization
+              buffInt = get.numbers[0];
+            else {
+              buffInt = '$' + (++$);
+              parts.push(!get.parts.length ? get.numbers : get);
+            }
+
+            continue ;
+          } else if(strict)
+            return _e('No content between parenthesis');
+          else {
+            buffInt    = '0';
+            /*buffLetter = '';
+            buffString = '"';*/
+            floating   = false;
+          }
+        }
+      } else if(functionCall && char === ',') {
+        callBuffs.push(p_buff);
+        p_buff = '';
+        continue ;
+      }
+
+      if(p_count) {
+        p_buff += char;
+        continue ;
+      }
+
+      if(char === '"' && stringOpened) {
+        stringOpened = false;
+        buffString  += '"';
+        continue ;
+      }
+
+      if(stringOpened) {
+        buffString += char;
+        continue ;
+      }
+
+      if(char === ' ')
+        continue ;
+
+      if('+-*/'.indexOf(char) !== -1) {
+        // It's an operator
+        // Here is the buffer
+        let buff = buffInt || buffLetter || buffString;
+
+        if(!buff)
+          return _e('Missing number before operator', -buff.length);
+
+        if(floating && !buffDec)
+          return _e('Missing decimal part of floating number', -buff.length);
+
+        if(strExp && char !== '+')
+          return _e('Only the "+" operator is allowed in string expressions', -buff.length);
+
+        if(operator === '+' || operator === '-' || !operator)
+          numbers.push(buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec));
+        else { // operator === '*' || operator === '/'
+          parts.push(numbers.splice(numbers.length - 2, 2).concat(buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec)));
+          numbers.push('$' + (++$));
+        }
+
+        // The last item
+        let item = numbers[numbers.length - 1], type = UnderBasic.getType(item, extended, variables);
+
+        // Check types
+        if(typeof type === 'object')
+          return _e('Unknown content type', -buff.length);
+
+        switch(type) {
+          // Some types are checked again here because this function doesn't care about "A" or "Str1"
+
+          case 'number':
+            if(strExp)
+              return _e('Numbers are not allowed in string expressions', -buff.length);
+
+            strExp = false;
+            break;
+
+          case 'string':
+          case 'yvar':
+            if(strExp !== undefined && !strExp)
+              return _e('Strings are not allowed in numeric expressions', -buff.length);
+
+            strExp = true;
+            break;
+
+          case 'list':
+          case 'matrix':
+          case 'picture':
+          case 'gdb':
+          case 'program':
+          case 'appvar':
+          case 'group':
+          case 'application':
+            return _e('Type ' + type + ' is forbidden in expressions', -buff.length);
+        }
+
+        numbers.push(char);
+        operator = char;
+
+        // Reset current number
+        buffInt    = '';
+        buffDec    = '';
+        buffLetter = '';
+        buffString = '';
+        floating   = false;
+      } else if('0123456789'.indexOf(char) !== -1) {
+        if(buffLetter)
+          buffLetter += char;
+        else if(strExp)
+          return _e('Can\'t put a number into a string expression');
+        else if(!floating)
+          buffInt += char;
+        else
+          buffDec += char;
+      } else if(char === '.') {
+        if(floating)
+          return _e('Can\'t use two times the "." symbol in a number');
+
+        if(buffString)
+          return _e('Can\'t use the "." symbol after a string');
+
+        if(buffLetter)
+          return _e('Can\'t use the "." symbol after a name');
+
+        if(!buffInt) {
+          if(strict)
+            return _e('Missing integer part');
+
+          buffInt = '0';
+        }
+
+        floating = true;
+      } else if(char.match(/[a-zA-Z_]/))
+        buffLetter += char;
+      else if(char === '"') {
+        if(numExp)
+          return _e('Can\'t put a string into a numeric expression');
+
+        stringOpened = true;
+        buffString   = '"';
+
+        continue ;
+      } else
+        return _e('Syntax error : Unknown symbol');
+    }
+
+    if(p_count)
+      return _e(p_count + ' parenthesis not closed');
+
+    numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
+
+    let ret = {numbers: numbers.slice(0, numbers.length - 2), parts: parts};
+    if(strExp) ret.strExp = true;
+
+    return ret;
+  };
+
   // Export data into the library
   UBL = {
     types, short_types, extended_types, short_extended_types,
