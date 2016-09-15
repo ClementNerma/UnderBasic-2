@@ -203,7 +203,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the row\'s end', col);
 
         // If the buffer is not a number...
-        if(!this.getType(buff.trim(), variables))
+        if(typeof this.getType(buff.trim(), variables) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.replace(/^ +/, '').length);
 
         // Push the item to the collection
@@ -235,7 +235,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the separator', col);
 
         // If the buffer is not a number...
-        if(!this.getType(buff, variables))
+        if(typeof this.getType(buff, variables) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.length);
 
         // Push the item to the collection
