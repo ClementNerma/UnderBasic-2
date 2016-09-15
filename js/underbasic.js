@@ -809,14 +809,16 @@ const UnderBasic = (new (function() {
   UBL = {
     types, short_types, extended_types, short_extended_types,
     allTypes: types.concat(short_types).concat(extended_types).concat(short_extended_types),
-    // Native variables and functions
-    builtins: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').concat(
+    // Native variables...
+    native: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').concat(
             [ "Str0", "Str1", "Str2", "Str3", "Str4", "Str5", "Str6", "Str7", "Str8", "Str9",
               "Pic0", "Pic1", "Pic2", "Pic3", "Pic4", "Pic5", "Pic6", "Pic7", "Pic8", "Pic9",
               "GDB0", "GDB1", "GDB2", "GDB3", "GDB4", "GDB5", "GDB6", "GDB7", "GDB8", "GDB9",
               "Y0", "Y1", "Y2", "Y3", "Y4", "Y5", "Y6", "Y7", "Y8", "Y9",
               "L1", "L2", "L3", "L4", "L5", "L6",
-              "theta", "answer", "u", "v", "w", "n" ])
+              "theta", "answer", "u", "v", "w", "n" ]),
+    // and functions
+    builtins: [ "length", "dim", "exit", "stop" ]
   };
 
   // Keywords

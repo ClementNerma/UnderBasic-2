@@ -15,10 +15,10 @@
     return new RegExp("^((" + words.join(")|(") + "))\\b");
   }
 
-  var wordOperators  = wordRegexp(["and", "or", "not", "is"]);
+  let wordOperators  = wordRegexp(["and", "or", "not", "is"]);
 
-  var commonKeywords = UBL.keywords;
-  var commonBuiltins = UBL.builtins;
+  let commonKeywords = UBL.keywords;
+  let commonBuiltins = UBL.builtins;
 
   CodeMirror.registerHelper("hintWords", "underbasic", commonKeywords.concat(commonBuiltins));
 
@@ -26,52 +26,43 @@
     return state.scopes[state.scopes.length - 1];
   }
 
-  CodeMirror.defineMode("underbasic", function(conf, parserConf) {
-    var ERRORCLASS = "error";
+  CodeMirror.defineMode("underbasic", function(conf/*, parserConf*/) {
+    let ERRORCLASS = "error";
 
-    var singleDelimiters = parserConf.singleDelimiters || /^[\(\)\[\]\{\}@,:`=;\.]/;
-    var doubleOperators = parserConf.doubleOperators || /^([!<>]==|<>|<<|>>|\/\/|\*\*)/;
-    var doubleDelimiters = parserConf.doubleDelimiters || /^(\+=|\-=|\*=|%=|\/=|&=|\|=|\^=)/;
-    var tripleDelimiters = parserConf.tripleDelimiters || /^(\/\/=|>>=|<<=|\*\*=)/;
+    let singleDelimiters = /^[\(\)\[\]\{\}@,:`=;\.]/;
+    let doubleOperators = /^([!<>]==|<>|<<|>>|\/\/|\*\*)/;
+    let doubleDelimiters = /^(\+=|\-=|\*=|%=|\/=|&=|\|=|\^=)/;
+    let tripleDelimiters = /^(\/\/=|>>=|<<=|\*\*=)/;
 
-    var hangingIndent = parserConf.hangingIndent || conf.indentUnit;
+    let hangingIndent = conf.indentUnit;
 
-    var myKeywords = commonKeywords, myBuiltins = commonBuiltins;
-    if (parserConf.extra_keywords != undefined)
-      myKeywords = myKeywords.concat(parserConf.extra_keywords);
+    let myKeywords = commonKeywords;
+    let myBuiltins = commonBuiltins;
 
-    if (parserConf.extra_builtins != undefined)
-      myBuiltins = myBuiltins.concat(parserConf.extra_builtins);
+    // since http://legacy.python.org/dev/peps/pep-0465/ @ is also an operator
+    let singleOperators = /^[\+\-\*\/]/;
+    let identifiers = /^[_A-Za-z\u00A1-\uFFFF][_A-Za-z0-9\u00A1-\uFFFF]*/;
+    let stringPrefixes = new RegExp("^(([rbuf]|(br))?('{3}|\"{3}|['\"]))", "i");
 
-    var py3 = parserConf.version && parseInt(parserConf.version, 10) == 3
-    if (py3) {
-      // since http://legacy.python.org/dev/peps/pep-0465/ @ is also an operator
-      var singleOperators = parserConf.singleOperators || /^[\+\-\*\/%&|\^~<>!@]/;
-      var identifiers = parserConf.identifiers|| /^[_A-Za-z\u00A1-\uFFFF][_A-Za-z0-9\u00A1-\uFFFF]*/;
-      var stringPrefixes = new RegExp("^(([rbuf]|(br))?('{3}|\"{3}|['\"]))", "i");
-    } else {
-      var singleOperators = parserConf.singleOperators || /^[\+\-\*\/%&|\^~<>!]/;
-      var identifiers = parserConf.identifiers|| /^[_A-Za-z][_A-Za-z0-9]*/;
-      var stringPrefixes = new RegExp("^(([rub]|(ur)|(br))?('{3}|\"{3}|['\"]))", "i");
-    }
-    var keywords = wordRegexp(myKeywords);
-    var builtins = wordRegexp(myBuiltins);
+    let native   = wordRegexp(UBL.native);
+    let keywords = wordRegexp(myKeywords);
+    let builtins = wordRegexp(myBuiltins);
 
     // tokenizers
     function tokenBase(stream, state) {
       if (stream.sol()) state.indent = stream.indentation()
       // Handle scope changes
       if (stream.sol() && top(state).type == "py") {
-        var scopeOffset = top(state).offset;
+        let scopeOffset = top(state).offset;
         if (stream.eatSpace()) {
-          var lineOffset = stream.indentation();
+          let lineOffset = stream.indentation();
           if (lineOffset > scopeOffset)
             pushPyScope(state);
           else if (lineOffset < scopeOffset && dedent(stream, state))
             state.errorToken = true;
           return null;
         } else {
-          var style = tokenBaseInner(stream, state);
+          let style = tokenBaseInner(stream, state);
           if (scopeOffset > 0 && dedent(stream, state))
             style += " " + ERRORCLASS;
           return style;
@@ -83,7 +74,7 @@
     function tokenBaseInner(stream, state) {
       if (stream.eatSpace()) return null;
 
-      var ch = stream.peek();
+      let ch = stream.peek();
 
       // Handle Comments
       if (ch == "#") {
@@ -93,7 +84,7 @@
 
       // Handle Number Literals
       if (stream.match(/^[0-9\.]/, false)) {
-        var floatLiteral = false;
+        let floatLiteral = false;
         // Floats
         if (stream.match(/^\d*\.\d+(e[\+\-]?\d+)?/i)) { floatLiteral = true; }
         if (stream.match(/^\d+\.\d*/)) { floatLiteral = true; }
@@ -104,7 +95,7 @@
           return "number";
         }
         // Integers
-        var intLiteral = false;
+        let intLiteral = false;
         // Hex
         if (stream.match(/^0x[0-9a-f]+/i)) intLiteral = true;
         // Binary
@@ -143,23 +134,17 @@
       if (stream.match(singleDelimiters))
         return "punctuation";
 
-      if (state.lastToken == "." && stream.match(identifiers))
-        return "property";
-
       if (stream.match(keywords) || stream.match(wordOperators))
         return "keyword";
 
       if (stream.match(builtins))
         return "builtin";
 
-      if (stream.match(/^(self|cls)\b/))
+      if (stream.match(native))
         return "variable-2";
 
-      if (stream.match(identifiers)) {
-        if (state.lastToken == "def" || state.lastToken == "class")
-          return "def";
+      if (stream.match(identifiers))
         return "variable";
-      }
 
       // Handle non-detected items
       stream.next();
@@ -170,8 +155,8 @@
       while ("rub".indexOf(delimiter.charAt(0).toLowerCase()) >= 0)
         delimiter = delimiter.substr(1);
 
-      var singleline = delimiter.length == 1;
-      var OUTCLASS = "string";
+      let singleline = delimiter.length == 1;
+      let OUTCLASS = "string";
 
       function tokenString(stream, state) {
         while (!stream.eol()) {
@@ -187,12 +172,8 @@
             stream.eat(/['"]/);
           }
         }
-        if (singleline) {
-          if (parserConf.singleLineStringErrors)
-            return ERRORCLASS;
-          else
-            state.tokenize = tokenBase;
-        }
+        if (singleline)
+          state.tokenize = tokenBase;
         return OUTCLASS;
       }
       tokenString.isString = true;
@@ -207,14 +188,14 @@
     }
 
     function pushBracketScope(stream, state, type) {
-      var align = stream.match(/^([\s\[\{\(]|#.*)*$/, false) ? null : stream.column() + 1
+      let align = stream.match(/^([\s\[\{\(]|#.*)*$/, false) ? null : stream.column() + 1
       state.scopes.push({offset: state.indent + hangingIndent,
                          type: type,
                          align: align})
     }
 
     function dedent(stream, state) {
-      var indented = stream.indentation();
+      let indented = stream.indentation();
       while (top(state).offset > indented) {
         if (top(state).type != "py") return true;
         state.scopes.pop();
@@ -225,8 +206,8 @@
     function tokenLexer(stream, state) {
       if (stream.sol()) state.beginningOfLine = true;
 
-      var style = state.tokenize(stream, state);
-      var current = stream.current();
+      let style = state.tokenize(stream, state);
+      let current = stream.current();
 
       // Handle decorators
       if (state.beginningOfLine && current == "@")
@@ -246,7 +227,7 @@
       if (current == ":" && !state.lambda && top(state).type == "py")
         pushPyScope(state);
 
-      var delimiter_index = current.length == 1 ? "[({".indexOf(current) : -1;
+      let delimiter_index = current.length == 1 ? "[({".indexOf(current) : -1;
       if (delimiter_index != -1)
         pushBracketScope(stream, state, "])}".slice(delimiter_index, delimiter_index+1));
 
@@ -263,7 +244,7 @@
       return style;
     }
 
-    var external = {
+    let external = {
       startState: function(basecolumn) {
         return {
           tokenize: tokenBase,
@@ -276,9 +257,9 @@
       },
 
       token: function(stream, state) {
-        var addErr = state.errorToken;
+        let addErr = state.errorToken;
         if (addErr) state.errorToken = false;
-        var style = tokenLexer(stream, state);
+        let style = tokenLexer(stream, state);
 
         if (style && style != "comment")
           state.lastToken = (style == "keyword" || style == "punctuation") ? stream.current() : style;
@@ -293,7 +274,7 @@
         if (state.tokenize != tokenBase)
           return state.tokenize.isString ? CodeMirror.Pass : 0;
 
-        var scope = top(state), closing = scope.type == textAfter.charAt(0)
+        let scope = top(state), closing = scope.type == textAfter.charAt(0)
         if (scope.align != null)
           return scope.align - (closing ? 1 : 0)
         else
@@ -310,7 +291,7 @@
 
   CodeMirror.defineMIME("text/x-underbasic", "underbasic");
 
-  var words = function(str) { return str.split(" "); };
+  let words = function(str) { return str.split(" "); };
 
   CodeMirror.defineMIME("text/x-cython", {
     name: "underbasic",
