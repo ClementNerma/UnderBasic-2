@@ -315,6 +315,15 @@ const UnderBasic = (new (function() {
     }
 
     /**
+      * Remove all spaces outside quotes
+      * @param {string} str
+      * @returns {string} str
+      */
+    function rmspace(str) {
+      return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => $1 ? $1.replace(/\s/g, '') : $2);
+    }
+
+    /**
       * Return an error object
       * @param {string} message
       * @param {object|number} [params] Parameters or column number
@@ -495,7 +504,7 @@ const UnderBasic = (new (function() {
           return error('Type mismatch : attempting to assign content type "${type}" in a variable of type "${type2}"', { type, type2: variables[match[1]] }, match[1].length + match[2].length + match[3].length + 1);
 
         // Output
-        output.push(match[4] + '->' + format(match[1]));
+        output.push(rmspace(match[4]) + '->' + format(match[1]));
       }
       // If the syntax is not valid...
       else
