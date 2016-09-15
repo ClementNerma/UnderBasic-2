@@ -158,10 +158,7 @@ const UnderBasic = (new (function() {
     if(parsed.failed)
       return parsed;
     // If a type was dected...
-    if(parsed.strExp)
-      return 'string';
-    else
-      return 'number';
+    return parsed.type;
   };
 
   /**
@@ -631,7 +628,7 @@ const UnderBasic = (new (function() {
               return get;
 
             // If that's not the type we expect for...
-            if(callfunc[index - 1] !== (get.strExp ? 'string' : 'number'))
+            if(callfunc[index - 1] !== get.type)
               return _e('Argument ' + index + ' must be a ' + callfunc[index - 1], col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
@@ -749,12 +746,12 @@ const UnderBasic = (new (function() {
               if(strExp)
                 return _e('Numbers are not allowed in string expressions', bl);
 
-              strExp = false;
+              numExp = true;
               break;
 
             case 'string':
             case 'yvar':
-              if(strExp !== undefined && !strExp)
+              if(strExp === false)
                 return _e('Strings are not allowed in numeric expressions', bl);
 
               strExp = true;
@@ -824,7 +821,7 @@ const UnderBasic = (new (function() {
     numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
 
     let ret = {numbers: numbers.slice(0, numbers.length - 2), parts: parts};
-    if(strExp) ret.strExp = true;
+    if(strExp) ret.type = 'string'; else ret.type = 'number';
 
     if(buffInt || buffDec || buffString || buffLetter)
       return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length)
