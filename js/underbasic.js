@@ -681,12 +681,12 @@ const UnderBasic = (new (function() {
         // The last item
         let item = numbers[numbers.length - 1], type = UnderBasic.getType(item, extended, variables);
 
-        // Check types
-        if(typeof type === 'object')
-          return _e('Unknown content type', bl);
-
         // If that's not a sub-expression
         if(!item.startsWith('$')) {
+          // Check types
+          if(typeof type === 'object')
+            return _e(type.content, bl);
+            
           switch(type) {
             // Some types are checked again here because this function doesn't care about "A" or "Str1"
 
