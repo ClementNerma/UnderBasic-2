@@ -582,7 +582,7 @@ const UnderBasic = (new (function() {
           for(let buff of callBuffs) {
             get = this.parse(buff, extended, variables, strict, undefined, undefined, expr, ++i - p_buff.length);
 
-            if(get instanceof Error)
+            if(get.failed)
               return get;
 
             if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
