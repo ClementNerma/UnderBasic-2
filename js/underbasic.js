@@ -631,7 +631,7 @@ const UnderBasic = (new (function() {
 
     let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
     let char, p_buff = '', p_count = 0, buffLetter = '', functionCall = null, callfunc = null, functionIndex = 0,
-        callBuffs = [], j, buffString = '', stringOpened = false, i = 0, functionColumn;
+        callBuffs = [], j, buffString = '', stringOpened = false, i = 0, functionColumn, staticType;
 
     expr += '+';
 
@@ -685,12 +685,13 @@ const UnderBasic = (new (function() {
             get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
             index ++;
 
+            // If failed to parse the content
             if(get.failed)
               return get;
 
             // If that's not the type we expect for...
             if(callfunc[index - 1] !== get.type)
-              return _e('Argument ' + index + ' must be a ' + callfunc[index - 1], col - i + (buff.match(/^ +/) || [''])[0].length);
+              return _e('Argument ' + index + ' must be a ' + callfunc[index - 1] + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
           }
@@ -772,8 +773,13 @@ const UnderBasic = (new (function() {
         // Position at the buffer's beginning
         let bl = - /* negative value */ (buff.length + 1 /* we're at the operator char, next to the buffer */);
 
+        // If that's the last operator and no value was given...
         if(i === expr.length && !buff)
           return _e('Missing something here', -2);
+
+        // If that's not the last operator and the type is static...
+        if(i === expr.length && staticType)
+          return _e('Type "' + staticType + '" is a static type, operations are not supported');
 
         if(!buff)
           return _e('Missing number before operator', bl);
@@ -826,7 +832,11 @@ const UnderBasic = (new (function() {
             case 'appvar':
             case 'group':
             case 'application':
-              return _e('Type ' + type + ' is forbidden in expressions', bl);
+              if(numbers.length > 1)
+                return _e('Type "' + type + '" is a static type and doesn\'t support operations');
+
+              staticType = type;
+              break;
           }
         }
 
@@ -882,7 +892,12 @@ const UnderBasic = (new (function() {
     numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
 
     let ret = {numbers: numbers.slice(0, numbers.length - 2), parts: parts};
-    if(strExp) ret.type = 'string'; else ret.type = 'number';
+    if(strExp)
+      ret.type = 'string';
+    else if(staticType)
+      ret.type = staticType;
+    else
+      ret.type = 'number';
 
     if(buffInt || buffDec || buffString || buffLetter)
       return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length)
