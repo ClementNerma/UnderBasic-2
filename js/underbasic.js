@@ -439,7 +439,7 @@ const UnderBasic = (new (function() {
               return error(msg, {type, max: 10});
 
             used.str ++;
-            alias = (used.str - 1).toString(); // 0, 1, 2, 3...
+            alias = 'Str' + (used.str - 1).toString(); // 0, 1, 2, 3...
             break;
 
           case 'list':
