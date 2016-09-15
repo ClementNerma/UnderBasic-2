@@ -681,8 +681,9 @@ const UnderBasic = (new (function() {
 
           let col = functionColumn, index = 0;
 
-          // If some arguments are missing...
-          if(callBuffs.length < callfunc.length)
+          // If some arguments are missing and the missing ones are not
+          // optionnals...
+          if(callBuffs.length < callfunc.length && !callfunc[callBuffs.length].startsWith('['))
             return _e('Missing ' + (callfunc.length - callBuffs.length) + ' arguments', -1 /* strangely the -1 is needed here... bug ? */);
 
           // For each argument given...
