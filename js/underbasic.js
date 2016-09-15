@@ -176,6 +176,17 @@ const UnderBasic = (new (function() {
     * @returns {boolean} working
     */
   this.match = (content, parent, variables) => {
+    // Case of an optionnal content...
+    if(parent.startsWith('[') && parent.endsWith(']')) {
+      // If no content was provided...
+      if(!content)
+        // Success !
+        return true;
+
+      // ELse, make it a normal type
+      parent = parent.substr(1, parent.length - 2);
+    }
+
     // Get type
     let type = this.getVarType(content, true, variables);
     // If a type was found...
