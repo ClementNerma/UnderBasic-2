@@ -527,15 +527,14 @@ const UnderBasic = (new (function() {
     * @param {string} expr
     * @param {boolean} [extended]
     * @param {object} [variables]
-    * @param {boolean} [strict] If set to true, will not allow empty integer parts (e.g. ".5"). Default: false
     * @returns {object} parsed
     */
-  this.parse = (expr, extended = false, variables = {}, strict, numExp, strExp, fullExpr, startI) => {
+  this.parse = (expr, extended = false, variables = {}, numExp, strExp, fullExpr, startI) => {
     // This function is derived from the Expression.js library which doesn't
     // have a code documentation.
 
     function _e(msg, add = 0) {
-      return _error(msg, i + (startI || -1) + 1 + add);
+      return _error(msg, i + (startI - 2 || -1) + 1 + add);
     }
 
     let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
@@ -580,7 +579,7 @@ const UnderBasic = (new (function() {
           let i = 0;
 
           for(let buff of callBuffs) {
-            get = this.parse(buff, extended, variables, strict, undefined, undefined, expr, ++i - p_buff.length);
+            get = this.parse(buff, extended, variables, undefined, undefined, expr, ++i - p_buff.length);
 
             if(get.failed)
               return get;
@@ -611,7 +610,7 @@ const UnderBasic = (new (function() {
         if(!p_count) {
           if(p_buff) {
             // parse content
-            get = this.parse(p_buff, extended, variables, strict, numExp, strExp, expr, i - p_buff.length);
+            get = this.parse(p_buff, extended, variables, numExp, strExp, expr, i - p_buff.length);
 
             if(get.failed)
               return get;
@@ -625,14 +624,8 @@ const UnderBasic = (new (function() {
             }
 
             continue ;
-          } else if(strict)
-            return _e('No content between parenthesis');
-          else {
-            buffInt    = '0';
-            /*buffLetter = '';
-            buffString = '"';*/
-            floating   = false;
-          }
+          } else
+            return _e('No content between parenthesis', -2);
         }
       } else if(functionCall && char === ',') {
         callBuffs.push(p_buff);
@@ -663,15 +656,17 @@ const UnderBasic = (new (function() {
         // It's an operator
         // Here is the buffer
         let buff = buffInt || buffLetter || buffString;
+        // Position at the buffer's beginning
+        let bl = - /* negative value */ (buff.length + 1 /* we're at the operator char, next to the buffer */);
 
         if(!buff)
-          return _e('Missing number before operator', -buff.length);
+          return _e('Missing number before operator', bl);
 
         if(floating && !buffDec)
-          return _e('Missing decimal part of floating number', -buff.length);
+          return _e('Missing decimal part of floating number', bl);
 
         if(strExp && char !== '+')
-          return _e('Only the "+" operator is allowed in string expressions', -buff.length);
+          return _e('Only the "+" operator is allowed in string expressions', bl);
 
         if(operator === '+' || operator === '-' || !operator)
           numbers.push(buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec));
@@ -685,7 +680,7 @@ const UnderBasic = (new (function() {
 
         // Check types
         if(typeof type === 'object')
-          return _e('Unknown content type', -buff.length);
+          return _e('Unknown content type', bl);
 
         // If that's not a sub-expression
         if(!item.startsWith('$')) {
@@ -694,7 +689,7 @@ const UnderBasic = (new (function() {
 
             case 'number':
               if(strExp)
-                return _e('Numbers are not allowed in string expressions', -buff.length);
+                return _e('Numbers are not allowed in string expressions', bl);
 
               strExp = false;
               break;
@@ -702,7 +697,7 @@ const UnderBasic = (new (function() {
             case 'string':
             case 'yvar':
               if(strExp !== undefined && !strExp)
-                return _e('Strings are not allowed in numeric expressions', -buff.length);
+                return _e('Strings are not allowed in numeric expressions', bl);
 
               strExp = true;
               break;
@@ -715,7 +710,7 @@ const UnderBasic = (new (function() {
             case 'appvar':
             case 'group':
             case 'application':
-              return _e('Type ' + type + ' is forbidden in expressions', -buff.length);
+              return _e('Type ' + type + ' is forbidden in expressions', bl);
           }
         }
 
@@ -747,12 +742,8 @@ const UnderBasic = (new (function() {
         if(buffLetter)
           return _e('Can\'t use the "." symbol after a name');
 
-        if(!buffInt) {
-          if(strict)
-            return _e('Missing integer part');
-
+        if(!buffInt)
           buffInt = '0';
-        }
 
         floating = true;
       } else if(char.match(/[a-zA-Z_]/))
