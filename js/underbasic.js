@@ -500,7 +500,7 @@ const UnderBasic = (new (function() {
     */
   this.parse = (expr, extended = false, variables = {}, strict, numExp, strExp, fullExpr, startI) => {
     function _e(msg, add = 0) {
-      return { failed: true, message: msg, content: i + (startI || -1) + 1 + add }; // 'i' starts from 0
+      return _error(msg, i + (startI || -1) + 1 + add);
     }
 
     let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
