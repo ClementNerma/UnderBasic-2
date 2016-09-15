@@ -24,8 +24,17 @@ function filesClickEvent() {
   * @returns {string}
   */
 function splitLines(sentence, width) {
+  let lines = sentence.split(/\r\n|\r|\n/);
+
+  if(lines.length > 1) {
+    for(let i = 0; i < lines.length; i++)
+      lines[i] = splitLines(lines[i], width);
+
+    return lines.join('\n');
+  }
+
   let rows = [];
-  let arr = sentence.split(" ");
+  let arr = sentence.split(' ');
   let currow = arr[0];
   let rowlen = currow.length;
 
