@@ -578,7 +578,7 @@ const UnderBasic = (new (function() {
             // parse content
             get = this.parse(p_buff, extended, variables, strict, numExp, strExp, expr, i - p_buff.length);
 
-            if(get instanceof Error)
+            if(get.failed)
               return get;
 
             if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
