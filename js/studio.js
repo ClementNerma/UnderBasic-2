@@ -24,21 +24,23 @@ function filesClickEvent() {
   * @returns {string}
   */
 function splitLines(sentence, width) {
-  var rows = [];
-  var maxlen = width;
-  var arr = sentence.split(" ");
-  var currow = arr[0];
-  var rowlen = currow.length;
-  for (var i = 1; i < arr.length; i++) {
-      var word = arr[i];
-      rowlen += word.length + 1;
-      if (rowlen <= maxlen) {
-          currow += " " + word;
-      } else {
-          rows.push(currow);
-          currow = word;
-          rowlen = word.length;
-      }
+  let rows = [];
+  let maxlen = width;
+  let arr = sentence.split(" ");
+  let currow = arr[0];
+  let rowlen = currow.length;
+
+  for(let i = 1; i < arr.length; i++) {
+    let word = arr[i];
+    rowlen += word.length + 1;
+
+    if(rowlen <= maxlen)
+      currow += " " + word;
+    else {
+      rows.push(currow);
+      currow = word;
+      rowlen = word.length;
+    }
   }
 
   rows.push(currow);
