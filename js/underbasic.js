@@ -522,6 +522,9 @@ const UnderBasic = (new (function() {
     * @returns {object} parsed
     */
   this.parse = (expr, extended = false, variables = {}, strict, numExp, strExp, fullExpr, startI) => {
+    // This function is derived from the Expression.js library which doesn't
+    // have a code documentation.
+
     function _e(msg, add = 0) {
       return _error(msg, i + (startI || -1) + 1 + add);
     }
@@ -675,33 +678,36 @@ const UnderBasic = (new (function() {
         if(typeof type === 'object')
           return _e('Unknown content type', -buff.length);
 
-        switch(type) {
-          // Some types are checked again here because this function doesn't care about "A" or "Str1"
+        // If that's not a sub-expression
+        if(!item.startsWith('$')) {
+          switch(type) {
+            // Some types are checked again here because this function doesn't care about "A" or "Str1"
 
-          case 'number':
-            if(strExp)
-              return _e('Numbers are not allowed in string expressions', -buff.length);
+            case 'number':
+              if(strExp)
+                return _e('Numbers are not allowed in string expressions', -buff.length);
 
-            strExp = false;
-            break;
+              strExp = false;
+              break;
 
-          case 'string':
-          case 'yvar':
-            if(strExp !== undefined && !strExp)
-              return _e('Strings are not allowed in numeric expressions', -buff.length);
+            case 'string':
+            case 'yvar':
+              if(strExp !== undefined && !strExp)
+                return _e('Strings are not allowed in numeric expressions', -buff.length);
 
-            strExp = true;
-            break;
+              strExp = true;
+              break;
 
-          case 'list':
-          case 'matrix':
-          case 'picture':
-          case 'gdb':
-          case 'program':
-          case 'appvar':
-          case 'group':
-          case 'application':
-            return _e('Type ' + type + ' is forbidden in expressions', -buff.length);
+            case 'list':
+            case 'matrix':
+            case 'picture':
+            case 'gdb':
+            case 'program':
+            case 'appvar':
+            case 'group':
+            case 'application':
+              return _e('Type ' + type + ' is forbidden in expressions', -buff.length);
+          }
         }
 
         numbers.push(char);
