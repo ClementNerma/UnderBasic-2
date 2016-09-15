@@ -686,7 +686,7 @@ const UnderBasic = (new (function() {
           // Check types
           if(typeof type === 'object')
             return _e(type.content, bl);
-            
+
           switch(type) {
             // Some types are checked again here because this function doesn't care about "A" or "Str1"
 
@@ -770,6 +770,9 @@ const UnderBasic = (new (function() {
 
     let ret = {numbers: numbers.slice(0, numbers.length - 2), parts: parts};
     if(strExp) ret.strExp = true;
+
+    if(buffInt || buffDec || buffString || buffLetter)
+      return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length)
 
     return ret;
   };
