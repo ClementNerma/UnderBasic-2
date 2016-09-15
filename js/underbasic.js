@@ -86,9 +86,10 @@ const UnderBasic = (new (function() {
     * @param {string} content
     * @param {boolean} [extended] Allow extended types
     * @param {object} [variables] Search through a set of variables
+    * @param {boolean} [dontParse] Do not parse the expression to increase the speed
     * @returns {string|object} type Error object if the type is unknown
     */
-  this.getType = (content, extended, variables = {}) => {
+  this.getType = (content, extended, variables = {}, dontParse = false) => {
     // Type get using @getVarType
     let type = this.getVarType(content, extended);
     // If the type was detected...
@@ -140,6 +141,11 @@ const UnderBasic = (new (function() {
       // That's a valid matrix
       return 'matrix';
     }
+
+    // If asked to not parse...
+    if(dontParse)
+      // Failed !
+      return _error('Unknown content type');
 
     // If the current content is the last parsed one...
     if(last_parsed === content) {
