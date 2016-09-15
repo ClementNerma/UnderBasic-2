@@ -56,6 +56,9 @@ const UnderBasic = (new (function() {
     * @type {number} */
   let errorWidth = 20;
 
+  // The last parsed content (used to avoid infinite loops)
+  let last_parsed;
+
   /**
     * Get the type of a variable from it's name
     * @param {string} name
@@ -137,8 +140,28 @@ const UnderBasic = (new (function() {
       return 'matrix';
     }
 
-    // Unknown type
-    return _error('Syntax error : Unknown content type');
+    // If the current content is the last parsed one...
+    if(last_parsed === content) {
+      // Reset it
+      last_parsed = '';
+      // Failed
+      return _error('Unknown content type [inf loop]');
+    }
+
+    // Set he last parsed content (used to avoid infinite loops)
+    last_parsed = content;
+    // The parsed expression
+    let parsed = this.parse(content, extended, variables);
+    // If that code is runned, that's not an infinite loop
+    last_parsed = null;
+    // If an error occured while parsing...
+    if(parsed.failed)
+      return parsed;
+    // If a type was dected...
+    if(parsed.strExp)
+      return 'string';
+    else
+      return 'number';
   };
 
   /**
