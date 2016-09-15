@@ -12,7 +12,7 @@
   "use strict";
 
   function wordRegexp(words) {
-    return new RegExp("^((" + words.join(")|(") + "))\\b");
+    return new RegExp("^((" + words.join('||').replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&").split('\\|\\|').join(')|(') + "))\\b");
   }
 
   let wordOperators  = wordRegexp(["and", "or", "not", "is"]);
