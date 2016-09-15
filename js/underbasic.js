@@ -632,7 +632,7 @@ const UnderBasic = (new (function() {
 
             // If that's not the type we expect for...
             if(callfunc[index - 1] !== (get.strExp ? 'string' : 'number'))
-              return _e('Bad type for argument ' + index, col - i + (buff.match(/^ +/) || [''])[0].length);
+              return _e('Argument ' + index + ' must be a ' + callfunc[index - 1], col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
           }
@@ -849,7 +849,55 @@ const UnderBasic = (new (function() {
 
   // ... and functions
   UBL.functions = {
-    dim: ['number', 'number', 'number']
+    abs: ['number', 'number'],
+    angle: ['number', 'number'],
+    Asm: ['void', 'program'],
+    AsmComp: ['void', 'program', 'program'],
+    augment: ['matrix', 'matrix', 'matrix'],
+    bal: ['number', 'number', '[number]'],
+    binomcdf: ['number', 'number', 'number', '[number]'],
+    binompdf: ['number', 'number', 'number', '[number]'],
+    Circle: ['void', 'number', 'number', 'number'],
+    conj: ['number', 'number'],
+    cos: ['number', 'number'],
+    arccos: ['number', 'number'],
+    cosh: ['number', 'number'],
+    arccosh: ['number', 'number'],
+    cumSum: ['matrix', 'list'],
+    det: ['number', 'matrix'],
+    dim: ['number', 'list'],
+    "e^": ['number', 'number'],
+    "Equ>String": ['void', 'yvar*', 'string*'],
+    expr: ['number', 'string'],
+    Fcdf: ['number', 'number', 'number', 'number', 'number'],
+    fMax: ['number', 'expression', 'number', 'number', 'number', '[number]'],
+    fMin: ['number', 'expression', 'number', 'number', 'number', '[number]'],
+    fnInt: ['number', 'expression', 'number', 'number', 'number', '[number]'],
+    For: ['void', 'number*', 'number', 'number'],
+    fPart: ['number', 'number'],
+    Fpdf: ['number', 'number', 'number', 'number'],
+    gcd: ['number', 'number', 'number'],
+    geometcdf: ['number', 'number', 'number'],
+    geometpdf: ['number', 'number', 'number'],
+    Get: ['void', 'mixed*'],
+    GetCalc: ['void', 'mixed*'],
+    getDate: ['list'],
+    getTime: ['list'],
+    getKey: ['number'],
+    identity: ['matrix', 'number'],
+    imag: ['number', 'number'],
+    inString: ['number', 'string', 'string'],
+    int: ['number', 'number'],
+    EInt: ['number', 'number', 'number', '[number]'],
+    invNorm: ['number', 'number', '[number]', '[number]'],
+    iPart: ['number', 'number'],
+    isClockOn: ['bool'],
+    lcm: ['number', 'number', 'number'],
+    length: ['number', 'string'],
+    Line: ['void', 'number', 'number', 'number', 'number', '[0]'],
+    "^List": ['list', 'list'],
+    "List>matr": ['void', 'list*', 'matrix*'],
+    ln: ['number', 'number']
   };
 
   // Keywords
