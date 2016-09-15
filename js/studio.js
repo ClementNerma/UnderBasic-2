@@ -25,7 +25,6 @@ function filesClickEvent() {
   */
 function splitLines(sentence, width) {
   let rows = [];
-  let maxlen = width;
   let arr = sentence.split(" ");
   let currow = arr[0];
   let rowlen = currow.length;
@@ -34,7 +33,7 @@ function splitLines(sentence, width) {
     let word = arr[i];
     rowlen += word.length + 1;
 
-    if(rowlen <= maxlen)
+    if(rowlen <= width)
       currow += " " + word;
     else {
       rows.push(currow);
