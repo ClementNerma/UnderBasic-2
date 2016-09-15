@@ -382,6 +382,10 @@ const UnderBasic = (new (function() {
       // Trim the line
       // Remove a potential ';' symbol at the end of the line
       line = line.trim().replace(/;+$/, '');
+      // Remove commentaries
+      line = line
+              .replace(/\/\/(.*)$/, '')
+              .replace(/#(.*)$/, '')
       // If the line is empty...
       if(!line.length)
         // Ignore it
