@@ -187,6 +187,14 @@ const UnderBasic = (new (function() {
       // Return false
       return false;
 
+    // Get the type
+    type = this.getType(content, true, variables, true);
+
+    // If a type was found...
+    if(typeof type === 'string')
+      // Check if it matches
+      return type === parent;
+
     // If the given variables is an expression object...
     if(variables && variables.hasOwnProperty('failed'))
       // Check the type
