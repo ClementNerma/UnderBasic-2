@@ -350,7 +350,6 @@ const UnderBasic = (new (function() {
       * @returns {string} formatted
       */
     function format(content) {
-      console.log(content);
       // The output string
       let out = '';
       // Characters passed since the beginning
@@ -631,13 +630,56 @@ const UnderBasic = (new (function() {
       return _error(msg, i + (startI - 2 || -1) + 1 + add);
     }
 
-    let buffInt = '', buffDec = '', floating = false, operator = '', numbers = [], $ = -1, get, parts = [];
-    let char, p_buff = '', p_count = 0, buffLetter = '', functionCall = null, callfunc = null, functionIndex = 0,
-        callBuffs = [], j, buffString = '', stringOpened = false, i = 0, functionColumn, staticType;
+    // Integer buffer
+    let buffInt = '';
+    // Decimal buffer
+    let buffDec= '';
+    // Is it a floating value ?
+    let floating = false;
+    // Current operator
+    let operator = '';
+    // Letters buffer, used for variables name
+    let buffLetter = '';
+    // String buffer, used for quoted values, e.g. "Hello World"
+    let buffString = '';
+    // List of the numbers found in the expression
+    let numbers = [];
+    // ???
+    let $ = -1;
+    // ???
+    let get;
+    // Parts of the expression that follow somes special operation rules
+    let parts = [];
+    // Current character in the expression
+    let char;
+    // The current column in the expression
+    let i = 0;
+    // ???
+    let p_buff = '';
+    // ???
+    let p_count = 0;
+    // The function that is currently called
+    let functionCall;
+    // The arguments of the currently called function
+    let callfunc;
+    // ???
+    let functionIndex = 0;
+    // Arguments given to the called function
+    let callBuffs = [];
+    // ???
+    let j;
+    // Is there a string opened ?
+    let stringOpened = false;
+    // ???
+    let functionColumn;
+    // The static type of the expression
+    let staticType;
+
+    
 
     expr += '+';
 
-    for(let char of expr) {
+    for(char of expr) {
       i++;
 
       if(char === '(') {
@@ -704,7 +746,7 @@ const UnderBasic = (new (function() {
             col += buff.length + 1;
           }
 
-            // Add a new part
+          // Add a new part
           parts.push({ function: functionCall, arguments: callBuffs });
           // Reset variables
           functionCall = null;
