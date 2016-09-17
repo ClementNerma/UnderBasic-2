@@ -723,6 +723,13 @@ const UnderBasic = (new (function() {
           if(!UBL.functions.hasOwnProperty(buffLetter))
             return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
 
+          // If the function is 'void'-typed
+          if(UBL.functions[buffLetter][0] === 'void') {
+            // If there were already some operations...
+            if(numbers.length)
+              return _e('Type mismatch : Can\'t use the "void" type here', -buffLetter.length - 1);
+          }
+
           // Set the called function name
           functionCall.push(buffLetter);
           // Set the column where the function was called
