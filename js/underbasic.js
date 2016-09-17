@@ -177,9 +177,10 @@ const UnderBasic = (new (function() {
     * @param {string} content
     * @param {string} parent
     * @param {object} [variables] variables OR parsed expression
+    * @param {object} [expr] The parsed expression
     * @returns {boolean} working
     */
-  this.match = (content, parent, variables) => {
+  this.match = (content, parent, variables, expr) => {
     // If the expected type is 'unref' (optionnal or not)...
     if(parent === 'unref' || parent === '[unref]')
       // Success !
@@ -196,8 +197,8 @@ const UnderBasic = (new (function() {
       parent = parent.substr(1, parent.length - 2);
     }
 
-    // Get type
-    let type = this.getVarType(content, true, variables);
+    // Get type, throught the variables or considering it's a variable name
+    let type = variables && variables.hasOwnProperty(content) ? variables[content] : this.getVarType(content, true);
     // If a type was found...
     if(type) // We know that the content is a pointer
       return (parent.endsWith('*') ? type === parent.substr(0, parent.length - 1) : type === parent) || parent === 'mixed*';
