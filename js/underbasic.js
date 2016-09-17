@@ -993,7 +993,7 @@ const UnderBasic = (new (function() {
 
         // If that's a static type...
         // AND there were already some operation(s) before...
-        if(someOps && staticTypes.includes(type)) {
+        if(staticTypes.includes(type)) {
           if(someOps)
             return _e('Type "' + type + '" is a static type and doesn\'t support operations');
 
