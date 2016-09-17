@@ -951,7 +951,9 @@ const UnderBasic = (new (function() {
       // If the current character is an operator...
       if('+-*/'.indexOf(char) !== -1) {
         // Here is the buffer
-        let buff = buffInt || buffLetter || buffString;
+        let buff = buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec);
+        // Is there already one or more operations on this part of the expression ?
+        let someOps = !!numbers.length;
         // Position at the buffer's beginning
         let bl = - /* negative value */ (buff.length + 1 /* we're at the operator char, next to the buffer */);
 
@@ -973,14 +975,15 @@ const UnderBasic = (new (function() {
           return _e('Only the "+" operator is allowed in string expressions', bl);
 
         if(operator === '+' || operator === '-' || !operator)
-          numbers.push(buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec));
+          numbers.push(buff);
         else { // operator === '*' || operator === '/'
-          parts.push(numbers.splice(numbers.length - 2, 2).concat(buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec)));
+          someOps = true;
+          parts.push(numbers.splice(numbers.length - 2, 2).concat(buff));
           numbers.push('$' + (++$));
         }
 
         // The last item
-        let item = numbers[numbers.length - 1], type = UnderBasic.getType(item, extended, variables);
+        let item = buff, type = UnderBasic.getType(item, extended, variables);
 
         // If that's not a sub-expression
         if(!item.startsWith('$')) {
@@ -1007,7 +1010,7 @@ const UnderBasic = (new (function() {
               break;
 
             default:
-              if(numbers.length > 1)
+              if(someOps)
                 return _e('Type "' + type + '" is a static type and doesn\'t support operations');
 
               staticType = type;
