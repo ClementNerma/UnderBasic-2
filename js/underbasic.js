@@ -408,11 +408,14 @@ const UnderBasic = (new (function() {
         if(!$1)
           return $2
 
+        if(combinations.includes($1.trim()))
+          return $1;
+
         return $1
-          .replace(/[a-zA-Z0-9]+ +(and|or|xor) +[a-zA-Z0-9_]/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/"[^"]+" +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
           .replace(/"[^"]+" +(and|or|xor) +([a-zA-Z0-9_])/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
           .replace(/([a-zA-Z0-9]+) +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
-          .replace(/"[^"]+" +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/[a-zA-Z0-9]+ +(and|or|xor) +[a-zA-Z0-9_]/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
           .replace(/ /g, '') // Remove all (other) spaces
           .replace(new RegExp(String.fromCharCode(160), 'g'), ' ') // Restore all spaces
       });
