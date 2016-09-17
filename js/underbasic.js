@@ -987,30 +987,27 @@ const UnderBasic = (new (function() {
         // The last item
         let item = buff, type = UnderBasic.getType(item, extended, variables);
 
-        // If that's not a sub-expression
-        if(!item.startsWith('$')) {
-          // Check types
-          if(typeof type === 'object')
-            return _e(type.content, bl);
+        // Check types
+        if(typeof type === 'object')
+          return _e(type.content, bl);
 
-          // If that's a static type...
-          // AND there were already some operation(s) before...
-          if(someOps && staticTypes.includes(type)) {
-            if(someOps)
-              return _e('Type "' + type + '" is a static type and doesn\'t support operations');
+        // If that's a static type...
+        // AND there were already some operation(s) before...
+        if(someOps && staticTypes.includes(type)) {
+          if(someOps)
+            return _e('Type "' + type + '" is a static type and doesn\'t support operations');
 
-            staticType = type;
-          }
-
-          // If the type is different from the global one...
-          // Excepted the 'number' type, which can use operations on any
-          // non-static type.
-          if(g_type && type !== g_type && type !== 'number')
-            return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
-
-          // Set the type as global
-          g_type = type;
+          staticType = type;
         }
+
+        // If the type is different from the global one...
+        // Excepted the 'number' type, which can use operations on any
+        // non-static type.
+        if(g_type && type !== g_type && type !== 'number')
+          return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
+
+        // Set the type as global
+        g_type = type;
 
         // Add the number to the list
         numbers.push(char);
