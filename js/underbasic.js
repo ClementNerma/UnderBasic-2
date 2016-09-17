@@ -356,7 +356,7 @@ const UnderBasic = (new (function() {
       // Characters passed since the beginning
       let passed = 0;
       // Split by space, ignoring spaces between quotes
-      let parts = content.match(/\w+|"(?:\\"|[^"])+"/g);
+      let parts = content.match(/[^"]+|"(?:\\"|[^"])+"/g);
 
       // For each part...
       for(let part of parts) {
