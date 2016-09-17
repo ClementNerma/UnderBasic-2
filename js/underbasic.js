@@ -1038,6 +1038,13 @@ const UnderBasic = (new (function() {
         if(i !== expr.length && staticType)
           return _e('Type "' + staticType + '" is a static type, operations are not supported');
 
+        // If the operator is '-' and no operation was done...
+        if(char === '-' && !numbers.length) {
+          // That's the negative symbol, not an operator. But because the parser
+          // only supports operators, put a '0' instead of the empty buffer.
+          buff = '0';
+        }
+
         if(!buff)
           return _e('Missing number before operator', bl);
 
