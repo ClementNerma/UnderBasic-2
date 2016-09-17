@@ -1195,11 +1195,11 @@ const UnderBasic = (new (function() {
       // If it's a letter...
       if(char.match(/[a-zA-Z_]/)) {
         // If a number was specified...
-        if(buffInt || floating || combination) {
+        if(buffInt || floating || buffString ||combination) {
           // If the following operations were not already do...
           if(!combination) {
             // Define it as the left part of combination
-            leftCombination = buffInt + (floating ? '.' : '') + buffDec;
+            leftCombination = buffString || (buffInt + (floating ? '.' : '') + buffDec);
             // Reset the buffers
             buffInt = ''; buffDec = ''; floating = null;
           }
@@ -1211,9 +1211,6 @@ const UnderBasic = (new (function() {
       } else
       // If that's a quote...
       if(char === '"') {
-        if(g_type && g_type !== 'string')
-          return _e('Can\'t put a string outside a string expression');
-
         stringOpened = true;
         buffString   = '"';
 
