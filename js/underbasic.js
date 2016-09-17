@@ -633,12 +633,12 @@ const UnderBasic = (new (function() {
     // Integer buffer
     let buffInt = '';
     // Decimal buffer
-    let buffDec= '';
+    let buffDec = '';
     // Is it a floating value ?
     let floating = false;
     // Current operator
     let operator = '';
-    // Letters buffer, used for variables name
+    // Letters buffer, used for variables and functions name
     let buffLetter = '';
     // String buffer, used for quoted values, e.g. "Hello World"
     let buffString = '';
@@ -654,11 +654,11 @@ const UnderBasic = (new (function() {
     let char;
     // The current column in the expression
     let i = 0;
-    // ???
-    let p_buff = '';
-    // ???
+    // The number of parenthesis opened
     let p_count = 0;
-    // The function that is currently called
+    // The content between the two parenthesis (sub-expression or function arguments)
+    let p_buff = '';
+    // The name of the function that is currently called
     let functionCall;
     // The arguments of the currently called function
     let callfunc;
@@ -670,18 +670,20 @@ const UnderBasic = (new (function() {
     let j;
     // Is there a string opened ?
     let stringOpened = false;
-    // ???
+    // The column where the function was called
     let functionColumn;
     // The static type of the expression
     let staticType;
 
-    
-
+    // Add a '+' because the last part of the expression must be parsed too
     expr += '+';
 
+    // For each char in the expression...
     for(char of expr) {
+      // Increase the column number
       i++;
 
+      // '(' symbol
       if(char === '(') {
         if(p_count) {
           p_count += 1;
@@ -689,25 +691,36 @@ const UnderBasic = (new (function() {
           continue ;
         }
 
+        // If the current value is a number...
         if(buffInt || buffDec)
           return _e('Opening parenthesis just after a number');
 
+        // If the current value is a string...
         if(buffString)
           return _e('Opening parenthesis just after a string');
 
+        // If the current value is a name...
+        // That should be a function
         if(buffLetter) {
+          // If the function doesn't exist
           if(!UBL.functions.hasOwnProperty(buffLetter))
             return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
 
+          // If the return value of the function does not match with the expression's one...
           if(UBL.functions[buffLetter][0] === 'string' && numExp)
             return _e('Strings are not allowed in numeric expressions', bl);
 
+          // If the return value of the function does not match with the expression's one...
           if(UBL.functions[buffLetter][0] === 'number' && strExp)
             return _e('Numbers are not allowed in string expressions', bl);
 
-          functionCall   = buffLetter;
+          // Set the called function name
+          functionCall = buffLetter;
+          // Set the column where the function was called
           functionColumn = i;
-          callfunc       = UBL.functions[buffLetter].slice(1);
+          // Set the needed arguments of the function
+          callfunc = UBL.functions[buffLetter].slice(1);
+          // ???
           functionIndex  = p_count + 1;
         }
 
@@ -718,12 +731,18 @@ const UnderBasic = (new (function() {
 
         if(p_count === 1)
           continue ;
-      } else if(char === ')') {
+      } else
+      // That should be the end of a sub-expression or a function call
+      if(char === ')') {
+        // If that was a function call...
         if(functionCall && p_count === functionIndex) {
           if(p_buff) // Fix a bug when script calls a function without any argument
             callBuffs.push(p_buff);
 
-          let col = functionColumn, index = 0;
+          // Defined a column for debugging
+          let col = functionColumn;
+          // The argument's number
+          let index = 0;
 
           // If some arguments are missing and the missing ones are not
           // optionnals...
@@ -757,32 +776,49 @@ const UnderBasic = (new (function() {
           continue ;
         }
 
+        // Here, we know that wasn't a function call
+        // If no parenthesis was opened...
         if(!p_count)
           return _e('No parenthesis is opened');
 
+        // Indicates that the parenthesis was closed
         p_count -= 1;
 
+        // If there is no more parenthesis...
         if(!p_count) {
+          // If there was a value specified between the parenthesis...
           if(p_buff) {
-            // parse content
+            // Parse it !
             get = this.parse(p_buff, extended, variables, numExp, strExp, expr, i - p_buff.length);
 
+            // If the parse failed...
             if(get.failed)
+              // Return the error
               return get;
 
+            // If there is only one number, don't consider it as a sub-expression
+            // but as a single value, that permit to reduce the final object's
+            // size and the evaluation speed.
             if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
               // Optimization
               buffInt = get.numbers[0];
             else {
+              // Indicates that this number is a part of an expression
               buffInt = '$' + (++$);
+              // Add the sub-expression
               parts.push(!get.parts.length ? get.numbers : get);
             }
 
+            // Ignore the next instructions
             continue ;
           } else
+            // If no content was specified between the parenthesis...
             return _e('No content between parenthesis', -2);
         }
-      } else if(functionCall && char === ',') {
+      } else
+      // If this is a function call and the current character is ','
+      // that corresponds to the arguments separator
+      if(functionCall && char === ',') {
         // If there is already the same number of arguments in the call and in
         // the function's declaration... (in fact we're checking for the right
         // number of arguments LESS 1, because there is still one argument
@@ -790,36 +826,55 @@ const UnderBasic = (new (function() {
         if(callBuffs.length === callfunc.length - 1)
           return _e('Too many arguments, function "' + functionCall + '" needs only ' + callfunc.length + ' arguments', -1);
 
+        // Add the argumet to the list
         callBuffs.push(p_buff);
+        // Reset the argument buffer
         p_buff = '';
+        // Ignore the nex instructions
         continue ;
       }
 
+      // If there is still parenthesis
       if(p_count) {
+        // Add the char to the buffer
         p_buff += char;
         continue ;
       }
 
+      // If the current char is '"'
+      // AND if the current value is a string...
       if(char === '"' && stringOpened) {
+        // Then that's the closing string symbol
+        // Indicates that the string is closed now
         stringOpened = false;
+        // Add the char to the buffer
         buffString  += '"';
+        // Ignore the next instructions
         continue ;
       }
 
+      // If a string is opened
       if(stringOpened) {
+        // Add this character to the buffer
         buffString += char;
+        // Ignore the next instructions
         continue ;
       }
 
+      // If the char is a space...
       if(char === ' ') {
+        // If we're in a function call...
         if(functionCall)
+          // Add it to the buffer
           p_buff += ' ';
 
+        // Else, it's ignored
+        // Ignore the next instructions
         continue ;
       }
 
+      // If the current character is an operator...
       if('+-*/'.indexOf(char) !== -1) {
-        // It's an operator
         // Here is the buffer
         let buff = buffInt || buffLetter || buffString;
         // Position at the buffer's beginning
@@ -892,7 +947,9 @@ const UnderBasic = (new (function() {
           }
         }
 
+        // Add the number to the list
         numbers.push(char);
+        // Set the (new) current operator
         operator = char;
 
         // Reset current number
@@ -901,7 +958,9 @@ const UnderBasic = (new (function() {
         buffLetter = '';
         buffString = '';
         floating   = false;
-      } else if('0123456789'.indexOf(char) !== -1) {
+      } else
+      // If it's a digit...
+      if('0123456789'.indexOf(char) !== -1) {
         if(buffLetter)
           buffLetter += char;
         else if(strExp)
@@ -910,7 +969,9 @@ const UnderBasic = (new (function() {
           buffInt += char;
         else
           buffDec += char;
-      } else if(char === '.') {
+      } else
+      // If it's a point (integer-decimal separator symbol)
+      if(char === '.') {
         if(floating)
           return _e('Can\'t use two times the "." symbol in a number');
 
@@ -924,9 +985,13 @@ const UnderBasic = (new (function() {
           buffInt = '0';
 
         floating = true;
-      } else if(char.match(/[a-zA-Z_]/))
+      } else
+      // If it's a letter...
+      if(char.match(/[a-zA-Z_]/))
         buffLetter += char;
-      else if(char === '"') {
+      else
+      // If that's a quote...
+      if(char === '"') {
         if(numExp)
           return _e('Can\'t put a string into a numeric expression');
 
