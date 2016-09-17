@@ -56,6 +56,10 @@ const UnderBasic = (new (function() {
     * @type {array} */
   const staticTypes = [ "picture", "gdb", "program", "appvar", "group", "application" ];
 
+  /** The combinations
+    * @type {array} */
+  const combinations = [ "and", "or", "xor" ];
+
   /** The errors width
     * @type {number} */
   let errorWidth = 20;
@@ -271,7 +275,7 @@ const UnderBasic = (new (function() {
       col ++;
 
       // If that's a space...
-      if(char === ' ') {
+      if(char === ' ' || char === String.fromCharCode(160)) {
         // Append it to the buffer (needed for errors position)
         buff += ' ';
         // Ignore it
@@ -393,10 +397,25 @@ const UnderBasic = (new (function() {
     /**
       * Remove all spaces outside quotes
       * @param {string} str
+      * @param {boolean} [allowCombinations] ALlow combinations
       * @returns {string} str
       */
-    function rmspace(str) {
-      return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => $1 ? $1.replace(/\s/g, '') : $2);
+    function rmspace(str, allowCombinations = false) {
+      if(!allowCombinations)
+        return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => $1 ? $1.replace(/ /g, '') : $2);
+
+      return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => {
+        if(!$1)
+          return $2
+
+        return $1
+          .replace(/[a-zA-Z0-9]+ +(and|or|xor) +[a-zA-Z0-9_]/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/"[^"]+" +(and|or|xor) +([a-zA-Z0-9_])/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/([a-zA-Z0-9]+) +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/"[^"]+" +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
+          .replace(/ /g, '') // Remove all (other) spaces
+          .replace(new RegExp(String.fromCharCode(160), 'g'), ' ') // Restore all spaces
+      });
     }
 
     /**
@@ -644,7 +663,7 @@ const UnderBasic = (new (function() {
           /* looking for an operator, if there is one content must be between parenthesis. The '+' operator doesn't need a parenthesis */
 
         // Output
-        output.push(format(rmspace(match[6])) + '->' + aliases[match[1]]);
+        output.push(format(rmspace(match[6], true)) + '->' + aliases[match[1]]);
       }
       // Here we know that's a plain expression
       // Its result will be stored by the interpreter to the "Ans" variable
@@ -662,9 +681,9 @@ const UnderBasic = (new (function() {
         // Output
         // If that's NOT an instruction...
         if(!result.instruction)
-          output.push(format(rmspace(line)));
+          output.push(format(rmspace(line, true)));
         else // If that IS an instruction...
-          output.push(format(rmspace(line).replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2')))
+          output.push(format(rmspace(line, true).replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2')))
       }
     }
 
@@ -747,6 +766,10 @@ const UnderBasic = (new (function() {
     let g_type = global_type || null;
     // Is the expression an instruction call ?
     let isInstruction = false;
+    // The combination operator
+    let combination = '';
+    // The number on the left of the operator
+    let leftCombination = '';
 
     // Add a '+' because the last part of the expression must be parsed too
     expr += '+';
@@ -1006,7 +1029,7 @@ const UnderBasic = (new (function() {
       }
 
       // If the char is a space...
-      if(char === ' ') {
+      if(char === ' ' || char === String.fromCharCode(160)) {
         // If we're in a function call...
         if(functionCall.length)
           // Add it to the buffer
@@ -1054,6 +1077,16 @@ const UnderBasic = (new (function() {
         if(g_type === 'string' && char !== '+')
           return _e('Only the "+" operator is allowed in string expressions', bl);
 
+        // If a combination was used...
+        if(combination) {
+          // If the combination is not known...
+          if(!combinations.includes(combination))
+            return _e('Unknown combination "' + combination + '"');
+
+          // Set the buffer
+          buff = leftCombination + ' ' + combination + ' ' + buff;
+        }
+
         if(operator === '+' || operator === '-' || !operator)
           numbers.push(buff);
         else { // operator === '*' || operator === '/'
@@ -1082,6 +1115,10 @@ const UnderBasic = (new (function() {
             // The item has the type of the sub-expression
             type = parts[item.substr(1)].type;
         } else
+        // If it's a combination...
+        if(combination)
+          type = 'number';
+        else // If it's a "normal" content
           // Get the item's type
           type = UnderBasic.getType(item, extended, variables);
 
@@ -1120,11 +1157,13 @@ const UnderBasic = (new (function() {
         operator = char;
 
         // Reset current number
-        buffInt    = '';
-        buffDec    = '';
-        buffLetter = '';
-        buffString = '';
-        floating   = false;
+        buffInt     = '';
+        buffDec     = '';
+        buffLetter  = '';
+        buffString  = '';
+        combination = '';
+        floating    = false;
+        leftCombination = null;
       } else
       // If it's a digit...
       if('0123456789'.indexOf(char) !== -1) {
@@ -1154,9 +1193,22 @@ const UnderBasic = (new (function() {
         floating = true;
       } else
       // If it's a letter...
-      if(char.match(/[a-zA-Z_]/))
-        buffLetter += char;
-      else
+      if(char.match(/[a-zA-Z_]/)) {
+        // If a number was specified...
+        if(buffInt || floating || combination) {
+          // If the following operations were not already do...
+          if(!combination) {
+            // Define it as the left part of combination
+            leftCombination = buffInt + (floating ? '.' : '') + buffDec;
+            // Reset the buffers
+            buffInt = ''; buffDec = ''; floating = null;
+          }
+
+          // Set the combination operator symbol
+          combination += char;
+        } else
+          buffLetter += char;
+      } else
       // If that's a quote...
       if(char === '"') {
         if(g_type && g_type !== 'string')
