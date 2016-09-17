@@ -363,7 +363,7 @@ const UnderBasic = (new (function() {
         if(!part.startsWith('"'))
           // Format it
           out += (passed ? content.charAt(passed - 1) : '')
-              +  part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] : word);
+              +  part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] || word : word);
 
         passed += part.length + 1;
       }
