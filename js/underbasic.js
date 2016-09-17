@@ -1003,7 +1003,7 @@ const UnderBasic = (new (function() {
         // If the type is different from the global one...
         // Excepted the 'number' type, which can use operations on any
         // non-static type.
-        if(g_type && type !== g_type && type !== 'number')
+        if(g_type && type !== g_type && g_type !== 'number' && type !== 'number')
           return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
 
         // Set the type as global
