@@ -829,7 +829,7 @@ const UnderBasic = (new (function() {
             index ++;
 
             // If that's not the type we expect for...
-            if(!this.match(buff.trim(), callfunc.last()[index - 1], get))
+            if(!this.match(buff.trim(), callfunc.last()[index - 1], variables, get))
               return _e('Argument ' + index + ' must be a ' + callfunc.last()[index - 1].replace(/^\[(.*)\]$/, '$1') + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
