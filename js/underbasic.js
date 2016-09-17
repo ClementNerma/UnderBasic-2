@@ -228,7 +228,7 @@ const UnderBasic = (new (function() {
       return false;
 
     // Here we have a successfully parsed content, we check its type...
-    return (parse.type === parent);
+    return (parse.type === parent || parent === 'mixed');
   };
 
   /**
