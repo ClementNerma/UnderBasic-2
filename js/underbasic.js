@@ -54,7 +54,7 @@ const UnderBasic = (new (function() {
 
   /** The types that doesn't support any operation (static types)
     * @type {array} */
-  const staticTypes = [ "list", "matrix", "picture", "gdb", "program", "appvar", "group", "application" ];
+  const staticTypes = [ "picture", "gdb", "program", "appvar", "group", "application" ];
 
   /** The errors width
     * @type {number} */
