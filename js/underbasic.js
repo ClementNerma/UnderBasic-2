@@ -981,6 +981,7 @@ const UnderBasic = (new (function() {
 
         // If that's not the last operator but the 'void' type was used...
         if(i !== expr.length && g_type === 'void')
+          return _e('Can\'t use operations with a void function');
 
         // If that's not the last operator and the type is static...
         if(i !== expr.length && staticType)
@@ -1043,7 +1044,8 @@ const UnderBasic = (new (function() {
         // If the global type is 'list', and that list is divided by 2, the type
         // must NOT change, so the 'number' type don't have to override the
         // 'list' one.
-        if(type !== 'number' || !g_type)
+        // Also, ignore the 'mixed' type
+        if(type !== 'number' && type !== 'mixed' || !g_type)
           // Set the type as global
           g_type = type;
 
