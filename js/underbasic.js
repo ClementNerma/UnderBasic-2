@@ -590,7 +590,7 @@ const UnderBasic = (new (function() {
           /* looking for an operator, if there is one content must be between parenthesis. The '+' operator doesn't need a parenthesis */
 
         // Output
-        output.push(rmspace(match[6]) + '->' + format(match[1]));
+        output.push(format(rmspace(match[6])) + '->' + aliases[match[1]]);
       }
       // 'Return' instruction
       else if(line === 'exit')
