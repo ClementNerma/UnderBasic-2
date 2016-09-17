@@ -744,6 +744,9 @@ const UnderBasic = (new (function() {
             // If there were already some operations...
             if(numbers.length)
               return _e('Type mismatch : Can\'t use the "void" type here', -buffLetter.length - 1);
+
+            // Set the global type as 'void'
+            g_type = 'void';
           }
 
           // Set the called function name
@@ -975,6 +978,9 @@ const UnderBasic = (new (function() {
         // If that's the last operator and no value was given...
         if(i === expr.length && !buff)
           return _e('Missing something here', -2);
+
+        // If that's not the last operator but the 'void' type was used...
+        if(i !== expr.length && g_type === 'void')
 
         // If that's not the last operator and the type is static...
         if(i !== expr.length && staticType)
