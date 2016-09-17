@@ -214,7 +214,7 @@ const UnderBasic = (new (function() {
     // If a type was found...
     if(typeof type === 'string')
       // Check if it matches
-      return type === parent;
+      return type === parent || parent === 'mixed';
 
     // If the given variables is an expression object...
     if(variables)
