@@ -201,12 +201,19 @@ const UnderBasic = (new (function() {
     let type = variables && variables.hasOwnProperty(content) ? variables[content] : this.getVarType(content, true);
     // If a type was found...
     if(type) // We know that the content is a pointer
-      return (parent.endsWith('*') ? type === parent.substr(0, parent.length - 1) : type === parent) || parent === 'mixed*';
+      return (parent.endsWith('*') ?
+              type === parent.substr(0, parent.length - 1) :
+              (parent.endsWith('~') ? false : type === parent))
+              || parent === 'mixed*';
 
     // Now we know that's not a pointer, so, if the expected type is a pointer...
     if(parent.endsWith('*'))
       // Return false
       return false;
+
+    // We can also remove the '~' symbol (if it was specified)
+    if(parent.endsWith('~'))
+      parent = parent.substr(0, parent.length - 1);
 
     // Get the type
     type = this.getType(content, true, variables, true);
