@@ -1025,7 +1025,7 @@ const UnderBasic = (new (function() {
       if('0123456789'.indexOf(char) !== -1) {
         if(buffLetter)
           buffLetter += char;
-        else if(g_type !== 'string')
+        else if(g_type && g_type !== 'string')
           return _e('Can\'t put a number into a ' + g_type + ' expression');
         else if(!floating)
           buffInt += char;
