@@ -1084,7 +1084,7 @@ const UnderBasic = (new (function() {
         if(combination) {
           // If the combination is not known...
           if(!combinations.includes(combination))
-            return _e('Unknown combination "' + combination + '"');
+            return _e('Invalid combinations syntax');
 
           // Set the buffer
           buff = leftCombination + ' ' + combination + ' ' + buff;
