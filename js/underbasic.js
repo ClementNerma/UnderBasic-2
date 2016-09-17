@@ -461,7 +461,7 @@ const UnderBasic = (new (function() {
         continue ;
 
       // If that's a variable declaration...
-      if(match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)$/)) {
+      if(match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/)) {
         // If this variable was already defined...
         if(variables.hasOwnProperty(match[3]))
           return error('Variable "${name}" is already defined', { name: match[3] }, match[1].length + match[2].length);
@@ -477,6 +477,34 @@ const UnderBasic = (new (function() {
         // Get the type as lower-cased (case insensitive)
         let type = match[1].toLowerCase();
 
+        // The shift of the content to assign and it's "=" symbol (including spaces)
+        let shift = match[4].length;
+        // The content to assign (if asked)
+        let assign = match[4].trim().replace(/^= */, '');
+        shift -= assign.length;
+        // The type of the assigned content
+        let a_type;
+        // If it's no null...
+        if(assign) {
+          // Parse it
+          let parsed = this.parse(assign, false, variables);
+          // If an error occured...
+          if(parsed.failed)
+            return formatError(parsed, match[1].length + match[2].length + match[3].length + shift);
+          // Set it's type
+          a_type = parsed.type;
+        }
+
+        // If the variable is declared implicitly...
+        if(type === 'var' || type === 'let' || type === 'declare' || type === 'local') {
+          // If there no assign content was specified...
+          if(!assign)
+            return error('Implicit declarations needs a default content');
+
+          // Set the type of the variable
+          type = a_type;
+        }
+
         // If that's a shorten type...
         if(short_types.includes(type))
           // Make it the real one
@@ -485,6 +513,10 @@ const UnderBasic = (new (function() {
           // If that's not a known type...
           if(!types.includes(type))
             return error('Unknown type "${type}"', { type });
+
+        // If a content is assigned and the type does not match...
+        if(a_type && type !== a_type)
+          return error('Type mismatch : Attempting to assign a ' + a_type + ' to a ' + type + ' variable', match[1].length + match[2].length + match[3].length + shift);
 
         // Set the variable
         variables[match[3]] = type;
@@ -1460,7 +1492,7 @@ const UnderBasic = (new (function() {
   };
 
   // Keywords
-  UBL.keywords = UBL.allTypes;
+  UBL.keywords = UBL.allTypes.concat([ "var", "let", "declare", "local" ]);
   UBL.builtins = Reflect.ownKeys(UBL.functions);
 
 })());
