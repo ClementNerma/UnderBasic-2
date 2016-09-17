@@ -626,7 +626,7 @@ const UnderBasic = (new (function() {
     * @param {object} [variables]
     * @returns {object} parsed
     */
-  this.parse = (expr, extended = false, variables = {}, numExp, strExp, fullExpr, startI) => {
+  this.parse = (expr, extended = false, variables = {}, global_type, fullExpr, startI) => {
     // This function is derived from the Expression.js library which doesn't
     // have a code documentation.
 
@@ -684,6 +684,8 @@ const UnderBasic = (new (function() {
     let ignoreNextComma = false;
     // The referers used for arguments types checking
     let referers = [];
+    // The global expression's type
+    let g_type = global_type || null;
 
     // Add a '+' because the last part of the expression must be parsed too
     expr += '+';
@@ -724,11 +726,11 @@ const UnderBasic = (new (function() {
             return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
 
           // If the return value of the function does not match with the expression's one...
-          if(UBL.functions[buffLetter][0] === 'string' && numExp)
+          if(UBL.functions[buffLetter][0] === 'string' && g_type === 'string')
             return _e('Strings are not allowed in numeric expressions', bl);
 
           // If the return value of the function does not match with the expression's one...
-          if(UBL.functions[buffLetter][0] === 'number' && strExp)
+          if(UBL.functions[buffLetter][0] === 'number' && g_type === 'string')
             return _e('Numbers are not allowed in string expressions', bl);
 
           // Set the called function name
@@ -859,7 +861,7 @@ const UnderBasic = (new (function() {
           // If there was a value specified between the parenthesis...
           if(p_buff) {
             // Parse it !
-            get = this.parse(p_buff, extended, variables, numExp, strExp, expr, i - p_buff.length);
+            get = this.parse(p_buff, extended, variables, g_type, expr, i - p_buff.length);
 
             // If the parse failed...
             if(get.failed)
@@ -971,7 +973,7 @@ const UnderBasic = (new (function() {
         if(floating && !buffDec)
           return _e('Missing decimal part of floating number', bl);
 
-        if(strExp && char !== '+')
+        if(g_type === 'string' && char !== '+')
           return _e('Only the "+" operator is allowed in string expressions', bl);
 
         if(operator === '+' || operator === '-' || !operator)
@@ -991,31 +993,23 @@ const UnderBasic = (new (function() {
           if(typeof type === 'object')
             return _e(type.content, bl);
 
-          switch(type) {
-            // Some types are checked again here because this function doesn't care about "A" or "Str1"
+          // If that's a static type...
+          // AND there were already some operation(s) before...
+          if(someOps && staticTypes.includes(type)) {
+            if(someOps)
+              return _e('Type "' + type + '" is a static type and doesn\'t support operations');
 
-            case 'number':
-              if(strExp)
-                return _e('Numbers are not allowed in string expressions', bl);
-
-              numExp = true;
-              break;
-
-            case 'string':
-            case 'yvar':
-              if(strExp === false)
-                return _e('Strings are not allowed in numeric expressions', bl);
-
-              strExp = true;
-              break;
-
-            default:
-              if(someOps)
-                return _e('Type "' + type + '" is a static type and doesn\'t support operations');
-
-              staticType = type;
-              break;
+            staticType = type;
           }
+
+          // If the type is different from the global one...
+          // Excepted the 'number' type, which can use operations on any
+          // non-static type.
+          if(g_type && type !== g_type && type !== 'number')
+            return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
+
+          // Set the type as global
+          g_type = type;
         }
 
         // Add the number to the list
@@ -1034,8 +1028,8 @@ const UnderBasic = (new (function() {
       if('0123456789'.indexOf(char) !== -1) {
         if(buffLetter)
           buffLetter += char;
-        else if(strExp)
-          return _e('Can\'t put a number into a string expression');
+        else if(g_type !== 'string')
+          return _e('Can\'t put a number into a ' + g_type + ' expression');
         else if(!floating)
           buffInt += char;
         else
@@ -1089,12 +1083,7 @@ const UnderBasic = (new (function() {
     numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
 
     let ret = { numbers: numbers.slice(0, numbers.length - 2), parts };
-    if(strExp)
-      ret.type = 'string';
-    else if(staticType)
-      ret.type = staticType;
-    else
-      ret.type = 'number';
+    ret.type = g_type || staticType || 'number';
 
     if(buffInt || buffDec || buffString || buffLetter)
       return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length)
