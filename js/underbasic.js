@@ -729,14 +729,6 @@ const UnderBasic = (new (function() {
           if(!UBL.functions.hasOwnProperty(buffLetter))
             return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
 
-          // If the return value of the function does not match with the expression's one...
-          if(UBL.functions[buffLetter][0] === 'string' && g_type === 'string')
-            return _e('Strings are not allowed in numeric expressions', bl);
-
-          // If the return value of the function does not match with the expression's one...
-          if(UBL.functions[buffLetter][0] === 'number' && g_type === 'string')
-            return _e('Numbers are not allowed in string expressions', bl);
-
           // Set the called function name
           functionCall.push(buffLetter);
           // Set the column where the function was called
