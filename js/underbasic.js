@@ -601,10 +601,17 @@ const UnderBasic = (new (function() {
         // Output
         output.push(format(rmspace(match[6])) + '->' + aliases[match[1]]);
       }
-      // If the syntax is not valid...
-      else
-        // Syntax error
-        return error('Syntax error');
+      // Here we know that's a plain expression
+      // Its result will be stored by the interpreter to the "Ans" variable
+      else {
+        // The result of the line's parsing
+        let result = this.parse(line, null, variables);
+        // If an error occured during the parsing...
+        if(result.failed)
+          return formatError(result);
+        // Output
+        output.push(format(rmspace(line)));
+      }
     }
 
     // Success !
