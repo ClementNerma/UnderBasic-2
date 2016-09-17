@@ -984,10 +984,15 @@ const UnderBasic = (new (function() {
         let item = buff, type;
 
         // If the item is a sub-expression...
-        if(item.startsWith('$'))
-          // The item has the type of the sub-expression
-          type = parts[item.substr(1)].type;
-        else
+        if(item.startsWith('$')) {
+          // If that's a function call...
+          if(parts[item.substr(1)].function)
+            // The item has the type of the function it refers to
+            type = UBL.functions[parts[item.substr(1)].function][0];
+          else // If that's a sub-expression...
+            // The item has the type of the sub-expression
+            type = parts[item.substr(1)].type;
+        } else
           // Get the item's type
           type = UnderBasic.getType(item, extended, variables);
 
