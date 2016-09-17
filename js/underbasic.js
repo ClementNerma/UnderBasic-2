@@ -985,7 +985,15 @@ const UnderBasic = (new (function() {
         }
 
         // The last item
-        let item = buff, type = UnderBasic.getType(item, extended, variables);
+        let item = buff, type;
+
+        // If the item is a sub-expression...
+        if(item.startsWith('$'))
+          // The item has the type of the sub-expression
+          type = parts[item.substr(1)].type;
+        else
+          // Get the item's type
+          type = UnderBasic.getType(item, extended, variables);
 
         // Check types
         if(typeof type === 'object')
@@ -1025,8 +1033,8 @@ const UnderBasic = (new (function() {
       if('0123456789'.indexOf(char) !== -1) {
         if(buffLetter)
           buffLetter += char;
-        else if(g_type && g_type !== 'string')
-          return _e('Can\'t put a number into a ' + g_type + ' expression');
+        else if(g_type === 'string')
+          return _e('Can\'t put a number into a string expression');
         else if(!floating)
           buffInt += char;
         else
