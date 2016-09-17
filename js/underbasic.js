@@ -207,7 +207,7 @@ const UnderBasic = (new (function() {
       return type === parent;
 
     // If the given variables is an expression object...
-    if(variables && variables.hasOwnProperty('failed'))
+    if(variables)
       // Check the type
       return !variables.failed && variables.type === parent;
 
