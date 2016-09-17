@@ -200,7 +200,7 @@ const UnderBasic = (new (function() {
     let type = this.getVarType(content, true, variables);
     // If a type was found...
     if(type) // We know that the content is a pointer
-      return (parent.endsWith('*') ? type === parent.substr(0, parent.length - 1) : type === parent);
+      return (parent.endsWith('*') ? type === parent.substr(0, parent.length - 1) : type === parent) || parent === 'mixed*';
 
     // Now we know that's not a pointer, so, if the expected type is a pointer...
     if(parent.endsWith('*'))
