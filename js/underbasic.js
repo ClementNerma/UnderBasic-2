@@ -616,7 +616,11 @@ const UnderBasic = (new (function() {
         if(result.failed)
           return formatError(result);
         // Output
-        output.push(format(rmspace(line)));
+        // If that's NOT an instruction...
+        if(!result.instruction)
+          output.push(format(rmspace(line)));
+        else // If that IS an instruction...
+          output.push(format(rmspace(line).replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2')))
       }
     }
 
