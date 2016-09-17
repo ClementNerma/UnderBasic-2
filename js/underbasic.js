@@ -423,7 +423,7 @@ const UnderBasic = (new (function() {
     // Declared variables
     let variables = { theta: 'number' };
     // Aliases (linked to variables)
-    let aliases = {};
+    let aliases = { theta: 'theta' };
     // Used aliases (for variables)
     let used = { real: 0, str: 0, list: 0, matrix: 0, yvar: 0, pic: 0, gdb: 0 };
     // Output
