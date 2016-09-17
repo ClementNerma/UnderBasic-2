@@ -363,8 +363,7 @@ const UnderBasic = (new (function() {
         // If that's a part NOT between quotes
         if(!part.startsWith('"'))
           // Format it
-          out += (passed ? content.charAt(passed - 1) : '')
-              +  part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] || word : word);
+          out += part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] || word : word);
         else
           out += part;
 
