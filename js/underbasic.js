@@ -426,7 +426,7 @@ const UnderBasic = (new (function() {
     // Declared functions
     let functions = {};
     // Declared variables
-    let variables = { theta: 'number', e: 'number', pi: 'number', n: 'number', i: 'number' };
+    let variables = { theta: 'number', e: 'number', pi: 'number', n: 'number', i: 'number', answer: 'mixed' };
     // Aliases (linked to variables)
     let aliases = { theta: 'theta' };
     // Used aliases (for variables)
