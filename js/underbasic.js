@@ -610,6 +610,11 @@ const UnderBasic = (new (function() {
       // Here we know that's a plain expression
       // Its result will be stored by the interpreter to the "Ans" variable
       else {
+        // If this is a function called without parenthesis...
+        if(match = line.match(/^([a-zA-Z][a-zA-Z0-9_]+)( +)([^\+\-\*\/\(].*)$/))
+          // Change the line's syntax to add parenthesis
+          line = match[1] + match[2] + '(' + match[3] + ')';
+
         // The result of the line's parsing
         let result = this.parse(line, null, variables, false);
         // If an error occured during the parsing...
