@@ -1095,8 +1095,8 @@ const UnderBasic = (new (function() {
       else
       // If that's a quote...
       if(char === '"') {
-        if(numExp)
-          return _e('Can\'t put a string into a numeric expression');
+        if(g_type && g_type !== 'string')
+          return _e('Can\'t put a string outside a string expression');
 
         stringOpened = true;
         buffString   = '"';
