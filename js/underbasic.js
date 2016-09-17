@@ -1015,8 +1015,14 @@ const UnderBasic = (new (function() {
         if(g_type && type !== g_type && g_type !== 'number' && type !== 'number')
           return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
 
-        // Set the type as global
-        g_type = type;
+        // If the type is not number
+        // OR there is no type set
+        // If the global type is 'list', and that list is divided by 2, the type
+        // must NOT change, so the 'number' type don't have to override the
+        // 'list' one.
+        if(type !== 'number' || !g_type)
+          // Set the type as global
+          g_type = type;
 
         // Add the number to the list
         numbers.push(char);
