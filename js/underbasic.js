@@ -180,6 +180,11 @@ const UnderBasic = (new (function() {
     * @returns {boolean} working
     */
   this.match = (content, parent, variables) => {
+    // If the expected type is 'unref' (optionnal or not)...
+    if(parent === 'unref' || paret === '[unref]')
+      // Success !
+      return true;
+
     // Case of an optionnal content...
     if(parent.startsWith('[') && parent.endsWith(']')) {
       // If no content was provided...
