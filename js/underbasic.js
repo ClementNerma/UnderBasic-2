@@ -181,7 +181,7 @@ const UnderBasic = (new (function() {
     */
   this.match = (content, parent, variables) => {
     // If the expected type is 'unref' (optionnal or not)...
-    if(parent === 'unref' || paret === '[unref]')
+    if(parent === 'unref' || parent === '[unref]')
       // Success !
       return true;
 
