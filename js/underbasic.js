@@ -204,7 +204,7 @@ const UnderBasic = (new (function() {
       return (parent.endsWith('*') ?
               type === parent.substr(0, parent.length - 1) :
               (parent.endsWith('~') ? false : type === parent))
-              || parent === 'mixed*';
+              || parent === 'mixed*' || parent === 'mixed';
 
     // Now we know that's not a pointer, so, if the expected type is a pointer...
     if(parent.endsWith('*'))
