@@ -1150,7 +1150,7 @@ const UnderBasic = (new (function() {
     arccosh: ['number', 'number'],
     CubicReg: ['void', '[list*]', '[list*]'],
     cumSum: ['matrix', 'list'],
-    "": ['dayOfWk(number,', 'number', 'number', 'number'],
+    dayOfWk: ['number,', 'number', 'number', 'number'],
     dbd: ['number', 'number', 'number'],
     "DEC Answer": ['void'],
     Degree: ['void'],
