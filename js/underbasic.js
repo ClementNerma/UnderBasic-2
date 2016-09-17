@@ -601,12 +601,6 @@ const UnderBasic = (new (function() {
         // Output
         output.push(format(rmspace(match[6])) + '->' + aliases[match[1]]);
       }
-      // 'Return' instruction
-      else if(line === 'exit')
-        output.push('Return');
-      // 'Stop' instruction
-      else if(line === 'stop')
-        output.push('Stop');
       // If the syntax is not valid...
       else
         // Syntax error
