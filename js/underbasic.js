@@ -464,6 +464,10 @@ const UnderBasic = (new (function() {
         if(functions.hasOwnProperty(match[3]))
           return error('Name "${name}" is already used for a function', { name: match[3] }, match[1].length + match[2].length);
 
+        // If that's a native function name...
+        if(UBL.functions.hasOwnProperty(match[3]))
+          return error('Name "${name}" is already use for a native function', { name: match[3] }, match[1].length + match[2].length);
+
         // Get the type as lower-cased (case insensitive)
         let type = match[1].toLowerCase();
 
