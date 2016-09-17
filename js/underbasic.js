@@ -52,6 +52,10 @@ const UnderBasic = (new (function() {
     * @type {array} */
   const short_extended_types = [ "prog", "appv", "group", "app" ];
 
+  /** The types that doesn't support any operation (static types)
+    * @type {array} */
+  const staticTypes = [ "list", "matrix", "picture", "gdb", "program", "appvar", "group", "application" ];
+
   /** The errors width
     * @type {number} */
   let errorWidth = 20;
@@ -659,21 +663,27 @@ const UnderBasic = (new (function() {
     // The content between the two parenthesis (sub-expression or function arguments)
     let p_buff = '';
     // The name of the function that is currently called
-    let functionCall;
+    let functionCall = [];
     // The arguments of the currently called function
-    let callfunc;
+    let callfunc = [];
     // ???
-    let functionIndex = 0;
+    let functionIndex = [];
     // Arguments given to the called function
     let callBuffs = [];
+    // The current function in the array
+    let func = 0;
     // ???
     let j;
     // Is there a string opened ?
     let stringOpened = false;
     // The column where the function was called
-    let functionColumn;
+    let functionColumn = [];
     // The static type of the expression
     let staticType;
+    // Ignore the next comma (used for embricked functions call)
+    let ignoreNextComma = false;
+    // The referers used for arguments types checking
+    let referers = [];
 
     // Add a '+' because the last part of the expression must be parsed too
     expr += '+';
@@ -685,10 +695,17 @@ const UnderBasic = (new (function() {
 
       // '(' symbol
       if(char === '(') {
-        if(p_count) {
+        // If that's just a simple parenthesis opening
+        if(p_count && !buffLetter) {
           p_count += 1;
           p_buff  += '(';
           continue ;
+        }
+
+        let a = buffInt, b = buffDec, c = buffString, d = buffLetter;
+
+        if(functionCall.length) {
+          buffLetter = p_buff.trim();
         }
 
         // If the current value is a number...
@@ -715,14 +732,29 @@ const UnderBasic = (new (function() {
             return _e('Numbers are not allowed in string expressions', bl);
 
           // Set the called function name
-          functionCall = buffLetter;
+          functionCall.push(buffLetter);
           // Set the column where the function was called
-          functionColumn = i;
+          functionColumn.push(i);
           // Set the needed arguments of the function
-          callfunc = UBL.functions[buffLetter].slice(1);
+          callfunc.push(UBL.functions[buffLetter].slice(1));
           // ???
-          functionIndex  = p_count + 1;
+          functionIndex.push(p_count + 1);
+
+          // If there is another function call after this one...
+          if(functionCall.length > 1) {
+            // Add an argument referer to it
+            callBuffs.last().push('$' + buffLetter);
+            // Reserve this referer
+            referers.push(buffLetter);
+          }
+
+          // Set the arguments
+          callBuffs.push([]);
+          // Reset the buffer
+          p_buff = '';
         }
+
+        buffLetter = d;
 
         if(!p_count)
           p_buff = '';
@@ -735,44 +767,82 @@ const UnderBasic = (new (function() {
       // That should be the end of a sub-expression or a function call
       if(char === ')') {
         // If that was a function call...
-        if(functionCall && p_count === functionIndex) {
+        if(functionCall.length && p_count === functionIndex.last()) {
           if(p_buff) // Fix a bug when script calls a function without any argument
-            callBuffs.push(p_buff);
+            callBuffs.last().push(p_buff);
 
           // Defined a column for debugging
-          let col = functionColumn;
+          let col = functionColumn.last();
           // The argument's number
           let index = 0;
 
+          // If there are too many arguments...
+          if(callBuffs.last().length > callfunc.last().length)
+            return _e('Too many arguments : function ' + functionCall.last() + ' requires only ' + callfunc.last().length + ' arguments, ' + callBuffs.last().length + ' given');
+
           // If some arguments are missing and the missing ones are not
           // optionnals...
-          if(callBuffs.length < callfunc.length && !callfunc[callBuffs.length].startsWith('['))
-            return _e('Missing ' + (callfunc.length - callBuffs.length) + ' arguments', -1 /* strangely the -1 is needed here... bug ? */);
+          if(callBuffs.last().length < callfunc.last().length && !callfunc.last()[callBuffs.last().length].startsWith('['))
+            return _e('Missing ' + (callfunc.last().length - callBuffs.last().length) + ' arguments', -1 /* strangely the -1 is needed here... bug ? */);
+
+          if(callBuffs.length && callBuffs.last()[0] && callBuffs.last()[0].startsWith('('))
+            callBuffs.last()[0] = callBuffs.last()[0].substr(1);
 
           // For each argument given...
-          for(let buff of callBuffs) {
-            get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
+          for(let buff of callBuffs.last()) {
+            // If this argument is a referer...
+            if(buff.startsWith('$') && referers.includes(buff.substr(1))) {
+              // Remove the buffer's first symbol
+              buff = buff.substr(1);
+              // Remove the referer
+              referers.splice(referers.indexOf(buff), 1);
+              // Set the type from the function's one
+              get = { failed: false /* not needed but specified for a better readibility */,
+                      type: UBL.functions[buff][0] };
+            } else { // Else, that's a normal argument
+              get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
+
+              // If failed to parse the content
+              if(get.failed)
+                return get;
+            }
+
             index ++;
 
-            // If failed to parse the content
-            if(get.failed)
-              return get;
-
             // If that's not the type we expect for...
-            if(!this.match(buff.trim(), callfunc[index - 1], get))
-              return _e('Argument ' + index + ' must be a ' + callfunc[index - 1] + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
+            if(!this.match(buff.trim(), callfunc.last()[index - 1], get))
+              return _e('Argument ' + index + ' must be a ' + callfunc.last()[index - 1].replace(/^\[(.*)\]$/, '$1') + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
           }
 
           // Add a new part
-          parts.push({ function: functionCall, arguments: callBuffs });
+          parts.push({ function: functionCall.last(), arguments: callBuffs.last() });
+
+          // If there is still a function call...
+          if(functionCall.length > 1)
+            ignoreNextComma = true;
+          else { // Else...
+            // If the function returned a static type...
+            if(staticTypes.includes(UBL.functions[functionCall[0]][0]))
+              staticType = UBL.functions[functionCall[0]][0];
+          }
+
+          // Remove the function call
+          functionCall.pop();
+          functionIndex.pop();
+          functionColumn.pop();
+          callBuffs.pop();
+          callfunc.pop();
+
           // Reset variables
-          functionCall = null;
-          buffInt      = '$' + (++$);
-          buffLetter   = '';
-          floating     = false;
-          p_count     -= 1;
+          buffInt = '$' + (++$);
+          buffLetter = '';
+          floating = false;
+          // Indicates that a parenthesis was close
+          p_count -= 1;
+          p_buff = '';
+          // Ignore the next instructions
           continue ;
         }
 
@@ -818,16 +888,20 @@ const UnderBasic = (new (function() {
       } else
       // If this is a function call and the current character is ','
       // that corresponds to the arguments separator
-      if(functionCall && char === ',') {
+      if(functionCall.length && char === ',') {
+        // If the next comma needs to be ignored...
+        if(ignoreNextComma)
+          continue ;
+
         // If there is already the same number of arguments in the call and in
         // the function's declaration... (in fact we're checking for the right
         // number of arguments LESS 1, because there is still one argument
         // after the ',' separator)
-        if(callBuffs.length === callfunc.length - 1)
-          return _e('Too many arguments, function "' + functionCall + '" needs only ' + callfunc.length + ' arguments', -1);
+        if(callBuffs.last().length === callfunc.last().length - 1)
+          return _e('Too many arguments, function "' + functionCall.last() + '" needs only ' + callfunc.length + ' arguments', -1);
 
-        // Add the argumet to the list
-        callBuffs.push(p_buff);
+        // Add the argument to the list
+        callBuffs.last().push(p_buff);
         // Reset the argument buffer
         p_buff = '';
         // Ignore the nex instructions
@@ -838,6 +912,7 @@ const UnderBasic = (new (function() {
       if(p_count) {
         // Add the char to the buffer
         p_buff += char;
+        // Ignore the next instructions
         continue ;
       }
 
@@ -864,7 +939,7 @@ const UnderBasic = (new (function() {
       // If the char is a space...
       if(char === ' ') {
         // If we're in a function call...
-        if(functionCall)
+        if(functionCall.length)
           // Add it to the buffer
           p_buff += ' ';
 
@@ -885,7 +960,7 @@ const UnderBasic = (new (function() {
           return _e('Missing something here', -2);
 
         // If that's not the last operator and the type is static...
-        if(i === expr.length && staticType)
+        if(i !== expr.length && staticType)
           return _e('Type "' + staticType + '" is a static type, operations are not supported');
 
         if(!buff)
@@ -931,14 +1006,7 @@ const UnderBasic = (new (function() {
               strExp = true;
               break;
 
-            case 'list':
-            case 'matrix':
-            case 'picture':
-            case 'gdb':
-            case 'program':
-            case 'appvar':
-            case 'group':
-            case 'application':
+            default:
               if(numbers.length > 1)
                 return _e('Type "' + type + '" is a static type and doesn\'t support operations');
 
@@ -999,6 +1067,15 @@ const UnderBasic = (new (function() {
         buffString   = '"';
 
         continue ;
+      } else if(char === '$') {
+        // '$' is a special symbol which refers to a function call
+        // It can only be placed at the beginning of an argument
+        // So, if the buffer already contains some data...
+        if(buffLetter)
+          return _e('Syntax error : The arguments referer symbol cannot be used here');
+
+        // Set the buffer with that special symbol
+        buffLetter = '$'
       } else
         return _e('Syntax error : Unknown symbol');
     }
@@ -1269,3 +1346,11 @@ const UnderBasic = (new (function() {
   UBL.builtins = Reflect.ownKeys(UBL.functions).concat(Reflect.ownKeys(UBL.statements));
 
 })());
+
+// Extend the Array's prototype
+Array.prototype.last = function() {
+  return this[this.length - 1];
+};
+
+// Debug function
+const d = e => console.log(JSON.parse(JSON.stringify(e)));
