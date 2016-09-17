@@ -490,7 +490,8 @@ const UnderBasic = (new (function() {
         continue ;
 
       // If that's a variable declaration...
-      if(match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/)) {
+      if((match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/))
+      || (match = line.match(/^()()([a-zA-Z0-9_]+)( *= *.+|)$/))) {
         // If this variable was already defined...
         if(variables.hasOwnProperty(match[3]))
           return error('Variable "${name}" is already defined', { name: match[3] }, match[1].length + match[2].length);
@@ -525,7 +526,7 @@ const UnderBasic = (new (function() {
         }
 
         // If the variable is declared implicitly...
-        if(type === 'var' || type === 'let' || type === 'declare' || type === 'local') {
+        if(type === 'var' || type === 'let' || type === 'declare' || type === 'local' || !type) {
           // If there no assign content was specified...
           if(!assign)
             return error('Implicit declarations needs a default content');
@@ -793,9 +794,8 @@ const UnderBasic = (new (function() {
 
         let a = buffInt, b = buffDec, c = buffString, d = buffLetter;
 
-        if(functionCall.length) {
+        if(functionCall.length)
           buffLetter = p_buff.trim();
-        }
 
         // If the current value is a number...
         if(buffInt || buffDec)
@@ -1090,13 +1090,7 @@ const UnderBasic = (new (function() {
           buff = leftCombination + ' ' + combination + ' ' + buff;
         }
 
-        if(operator === '+' || operator === '-' || !operator)
-          numbers.push(buff);
-        else { // operator === '*' || operator === '/'
-          someOps = true;
-          parts.push(numbers.splice(numbers.length - 2, 2).concat(buff));
-          numbers.push('$' + (++$));
-        }
+        numbers.push(buff);
 
         // The last item
         let item = buff, type;
