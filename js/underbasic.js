@@ -697,6 +697,8 @@ const UnderBasic = (new (function() {
     let referers = [];
     // The global expression's type
     let g_type = global_type || null;
+    // Is the expression an instruction call ?
+    let isInstruction = false;
 
     // Add a '+' because the last part of the expression must be parsed too
     expr += '+';
@@ -1014,8 +1016,13 @@ const UnderBasic = (new (function() {
           if(parts[item.substr(1)].function) {
             // The item has the type of the function it refers to
             type = UBL.functions[parts[item.substr(1)].function][0];
-            // If that's an instruction, use the 'void' type instead
-            if(type === 'inst') type = 'void';
+            // If that's an instruction
+            if(type === 'inst') {
+              // Use the 'void' type instead
+              type = 'void';
+              // Indicates that we are using an instruction
+              isInstruction = true;
+            }
           } else // If that's a sub-expression...
             // The item has the type of the sub-expression
             type = parts[item.substr(1)].type;
@@ -1117,17 +1124,27 @@ const UnderBasic = (new (function() {
         return _e('Syntax error : Unknown symbol');
     }
 
+    // If a parenthesis was not closed...
     if(p_count)
       return _e(p_count + ' parenthesis not closed');
 
+    // Push the last part of the expression
     numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
 
+    // The response
     let ret = { numbers: numbers.slice(0, numbers.length - 2), parts };
+    // Attach the expression's type
     ret.type = g_type || staticType || 'number';
+    // If the expression was an instruction call...
+    if(isInstruction)
+      // Indicates it
+      ret.instruction = true;
 
+    // If there is still a buffer...
     if(buffInt || buffDec || buffString || buffLetter)
-      return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length)
+      return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length);
 
+    // Return the response !
     return ret;
   };
 
