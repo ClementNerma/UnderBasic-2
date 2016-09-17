@@ -610,7 +610,7 @@ const UnderBasic = (new (function() {
       // Its result will be stored by the interpreter to the "Ans" variable
       else {
         // The result of the line's parsing
-        let result = this.parse(line, null, variables);
+        let result = this.parse(line, null, variables, false);
         // If an error occured during the parsing...
         if(result.failed)
           return formatError(result);
