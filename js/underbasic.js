@@ -696,7 +696,7 @@ const UnderBasic = (new (function() {
               return get;
 
             // If that's not the type we expect for...
-            if(callfunc[index - 1] !== get.type)
+            if(!this.match(buff.trim(), callfunc[index - 1], get))
               return _e('Argument ' + index + ' must be a ' + callfunc[index - 1] + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
 
             col += buff.length + 1;
