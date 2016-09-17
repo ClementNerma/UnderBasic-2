@@ -624,7 +624,7 @@ const UnderBasic = (new (function() {
     * @param {object} [variables]
     * @returns {object} parsed
     */
-  this.parse = (expr, extended = false, variables = {}, global_type, fullExpr, startI) => {
+  this.parse = (expr, extended = false, variables = {}, voidAsInstruction = true, global_type, fullExpr, startI) => {
     // This function is derived from the Expression.js library which doesn't
     // have a code documentation.
 
@@ -725,6 +725,10 @@ const UnderBasic = (new (function() {
 
           // If the function is 'void'-typed
           if(UBL.functions[buffLetter][0] === 'void') {
+            // If the 'void' type is forbidden...
+            if(voidAsInstruction)
+              return _e('That\'s a static instruction, can\'t be used here');
+
             // If there were already some operations...
             if(numbers.length)
               return _e('Type mismatch : Can\'t use the "void" type here', -buffLetter.length - 1);
@@ -799,7 +803,7 @@ const UnderBasic = (new (function() {
               get = { failed: false /* not needed but specified for a better readibility */,
                       type: UBL.functions[buff][0] };
             } else { // Else, that's a normal argument
-              get = this.parse(buff.trim(), extended, variables, undefined, undefined, expr, col);
+              get = this.parse(buff.trim(), extended, variables, voidAsInstruction, undefined, undefined, expr, col);
 
               // If failed to parse the content
               if(get.failed)
@@ -858,7 +862,7 @@ const UnderBasic = (new (function() {
           // If there was a value specified between the parenthesis...
           if(p_buff) {
             // Parse it !
-            get = this.parse(p_buff, extended, variables, g_type, expr, i - p_buff.length);
+            get = this.parse(p_buff, extended, variables, voidAsInstruction, g_type, expr, i - p_buff.length);
 
             // If the parse failed...
             if(get.failed)
