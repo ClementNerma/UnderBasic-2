@@ -1018,7 +1018,7 @@ const UnderBasic = (new (function() {
       }
 
       // If the current character is an operator...
-      if('+-*/'.indexOf(char) !== -1) {
+      if('+-*/^'.indexOf(char) !== -1) {
         // Here is the buffer
         let buff = buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec);
         // Is there already one or more operations on this part of the expression ?
