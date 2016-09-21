@@ -230,7 +230,7 @@ const UnderBasic = (new (function() {
     // If the given variables is an expression object...
     if(expr)
       // Check the type
-      return !expr.failed && expr.type === parent;
+      return !expr.failed && (expr.type === parent || parent === 'mixed');
 
     // Parse the content
     let parse = this.parse(content);
