@@ -228,9 +228,9 @@ const UnderBasic = (new (function() {
       return type === parent || parent === 'mixed';
 
     // If the given variables is an expression object...
-    if(variables)
+    if(expr)
       // Check the type
-      return !variables.failed && variables.type === parent;
+      return !expr.failed && expr.type === parent;
 
     // Parse the content
     let parse = this.parse(content);
