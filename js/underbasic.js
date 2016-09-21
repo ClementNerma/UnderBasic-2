@@ -530,7 +530,7 @@ const UnderBasic = (new (function() {
         else
           // If that's not a known type...
           if(!types.includes(type))
-            return error('Unknown type "${type}"', { type });
+            return error('Unknown type "${type}"', { type: match[1] });
 
         // If this variable was already defined...
         if(variables.hasOwnProperty(match[3]))
