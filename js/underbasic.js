@@ -492,18 +492,6 @@ const UnderBasic = (new (function() {
       // If that's a variable declaration...
       if((match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/))
       || (match = line.match(/^()()([a-zA-Z0-9_]+)( *= *.+|)$/))) {
-        // If this variable was already defined...
-        if(variables.hasOwnProperty(match[3]))
-          return error('Variable "${name}" is already defined', { name: match[3] }, match[1].length + match[2].length);
-
-        // If that's a function's name...
-        if(functions.hasOwnProperty(match[3]))
-          return error('Name "${name}" is already used for a function', { name: match[3] }, match[1].length + match[2].length);
-
-        // If that's a native function name...
-        if(UBL.functions.hasOwnProperty(match[3]))
-          return error('Name "${name}" is already used for a native function', { name: match[3] }, match[1].length + match[2].length);
-
         // Get the type as lower-cased (case insensitive)
         let type = match[1].toLowerCase();
 
@@ -543,6 +531,18 @@ const UnderBasic = (new (function() {
           // If that's not a known type...
           if(!types.includes(type))
             return error('Unknown type "${type}"', { type });
+
+        // If this variable was already defined...
+        if(variables.hasOwnProperty(match[3]))
+          return error('Variable "${name}" is already defined', { name: match[3] }, match[1].length + match[2].length);
+
+        // If that's a function's name...
+        if(functions.hasOwnProperty(match[3]))
+          return error('Name "${name}" is already used for a function', { name: match[3] }, match[1].length + match[2].length);
+
+        // If that's a native function name...
+        if(UBL.functions.hasOwnProperty(match[3]))
+          return error('Name "${name}" is already used for a native function', { name: match[3] }, match[1].length + match[2].length);
 
         // If a content is assigned and the type does not match...
         if(a_type && type !== a_type)
