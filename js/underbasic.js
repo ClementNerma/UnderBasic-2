@@ -446,7 +446,9 @@ const UnderBasic = (new (function() {
       // Define the part to display
       let part = line.substr(obj.column < errorWidth ? 0 : obj.column - errorWidth, 2 * errorWidth + 1);
       // Define the cursor's position
-      let cursor = obj.column < errorWidth ? obj.column : errorWidth;
+      // The Math.max() function is used here to prevent negative values if the
+      // parser calculates a wrong cursor position.
+      let cursor = Math.max(obj.column < errorWidth ? obj.column : errorWidth, 0);
       // Set the new message
       obj.content = `ERROR : At column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
 
