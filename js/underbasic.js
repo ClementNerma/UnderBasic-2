@@ -795,9 +795,6 @@ const UnderBasic = (new (function() {
 
         let a = buffInt, b = buffDec, c = buffString, d = buffLetter;
 
-        if(functionCall.length)
-          buffLetter = p_buff.trim();
-
         // If the current value is a number...
         if(buffInt || buffDec)
           return _e('Opening parenthesis just after a number');
