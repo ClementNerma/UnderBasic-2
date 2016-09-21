@@ -490,8 +490,9 @@ const UnderBasic = (new (function() {
         continue ;
 
       // If that's a variable declaration...
-      if((match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/))
-      || (match = line.match(/^()()([a-zA-Z0-9_]+)( *= *.+|)$/))) {
+      if(((match = line.match(/^([a-zA-Z]+)( +)([a-zA-Z0-9_]+)( *= *.+|)$/))
+       || (match = line.match(/^()()([a-zA-Z0-9_]+)( *= *.+|)$/)))
+       && (match ? !UBL.functions.hasOwnProperty(match[1]) : false)) {
         // Get the type as lower-cased (case insensitive)
         let type = match[1].toLowerCase();
 
