@@ -1387,7 +1387,7 @@ const UnderBasic = (new (function() {
               let ret = unnativeCatcher(error, called, parse);
 
               // If an error was returned...
-              if(ret.failed)
+              if(ret && ret.failed)
                 // Throw it
                 return ret;
 
