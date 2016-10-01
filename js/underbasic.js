@@ -1500,7 +1500,7 @@ const UnderBasic = (new (function() {
     StoreGDB: ['inst', 'number'],
     StorePic: ['inst', 'number'],
     "String>Equ": ['void', 'string', 'yvar*'],
-    sub: ['void', 'string', 'number', 'number'],
+    sub: ['string', 'string', 'number', 'number'],
     sum: ['number', 'list', '[number]', '[number]'],
     tan: ['number', 'number'],
     arctan: ['number', 'number'],
