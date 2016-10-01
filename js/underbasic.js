@@ -1147,7 +1147,7 @@ const UnderBasic = (new (function() {
         // Update the current position from the beginning of the expression
         fromBeginning += part.length + 1 /* Consider the comma */;
         // Update the formatted content
-        formatted = formatted.substr(0, formatted.length - 2);
+        formatted = formatted.substr(0, formatted.length - 3);
         // Reset variables
         op          = '';
         composed_op = false;
