@@ -959,6 +959,7 @@ const UnderBasic = (new (function() {
           type: g_type || 'number',
           formatted: formatted.replace(/,\+,$/, '').replace(/\+$/, '').replace(/,$/, '') /* Remove useless characters */,
           static: !!(staticType),
+          instruction: (g_type === 'inst'),
           unnativeCalls: unnative
         };
     }
