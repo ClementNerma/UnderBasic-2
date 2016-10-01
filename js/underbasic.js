@@ -482,7 +482,11 @@ const UnderBasic = (new (function() {
     // Number of the line
     let row = 0;
     // Declared functions
-    let functions = {};
+    // Here we put a '$$' function because if we pass an empty object to the
+    // @parse function, it will not use the native library
+    // That doen't make any problem because '$$' will throw a syntax error if
+    // it is used.
+    let functions = { '$$': true };
     // The content of all functions
     let functionsContent = {};
     // Declared variables
@@ -987,7 +991,7 @@ const UnderBasic = (new (function() {
     }
 
     // If the native functions are not present, but functions were specified...
-    if(functions && !functions['$'] /* There is a '$' field in UBL.functions */) {
+    if(Object.keys(functions).length && !functions['$'] /* There is a '$' field in UBL.functions */) {
       // The '$' field permit to detect that the native library is present
       // Because compiler doesn't allow '$' symbol in functions names, that will
       // not make any problem
