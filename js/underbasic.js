@@ -942,13 +942,13 @@ const UnderBasic = (new (function() {
         // Attach the 'unnative' data to the set...
         set.unnativeCalls = unnative;
         // ...the formatted content...
-        set.formatted = formatted.replace(/\+$/, '') /* Remove the last '+' character */;
+        set.formatted = formatted.replace(/,\+,$/, '').replace(/\+$/, '').replace(/,$/, '') /* Remove useless characters */;
         // ...and return it
         return set;
       } else // If that was a standard expression...
         return {
           type: g_type || 'number',
-          formatted: formatted.replace(/\+$/, '') /* Remove the last '+' character */,
+          formatted: formatted.replace(/,\+,$/, '').replace(/\+$/, '').replace(/,$/, '') /* Remove useless characters */,
           static: !!(staticType),
           unnativeCalls: unnative
         };
@@ -1135,7 +1135,7 @@ const UnderBasic = (new (function() {
         // The current part
         let part = set[set.length - 1];
         // ...and add a few informations
-        part.plain = content.substr(0, content.length - 3);
+        part.plain = content.substr(0, content.length - 2);
         // Attach the length
         part.length = part.plain.length + orgLength;
         // Attach the position from the beginning of the expression
@@ -1146,7 +1146,7 @@ const UnderBasic = (new (function() {
         // Update the current position from the beginning of the expression
         fromBeginning += part.length + 1 /* Consider the comma */;
         // Update the formatted content
-        formatted = formatted.substr(0, formatted.length - 3);
+        formatted = formatted.substr(0, formatted.length - 2);
         // Reset variables
         op          = '';
         composed_op = false;
