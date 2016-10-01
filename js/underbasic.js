@@ -475,10 +475,15 @@ const UnderBasic = (new (function() {
         shift -= assign.length;
         // The type of the assigned content
         let a_type;
-        // If it's no null...
+        // The parsed assigned content (if there is one)
+        // We made it global because at the end of this <if> block we output
+        // the assigned content
+        let parsed;
+
+        // If something is assigned...
         if(assign) {
           // Parse it
-          let parsed = this.parse(assign, variables, functions);
+          parsed = this.parse(assign, variables, functions);
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -601,6 +606,9 @@ const UnderBasic = (new (function() {
 
         // Allocate the new alias
         aliases[match[3]] = alias;
+        // If a value was assigned, output it
+        if(assign)
+          output.push(parsed.formatted + '->' + alias);
       }
       // If that's an assignment...
       else if(match = line.match(/^([a-zA-Z0-9_]+)( *)(\+|\-|\*|\/|)( *)=( *)(.*)$/)) {
