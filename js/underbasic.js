@@ -1399,9 +1399,10 @@ const UnderBasic = (new (function() {
               return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
           }
 
-          // If this function is not a native one, register this call into the
-          // 'unnative' list
-          unnative.push({ name: called, args: parse });
+          if(!UBL.functions.hasOwnProperty(called))
+            // If this function is not a native one, register this call into the
+            // 'unnative' list
+            unnative.push({ name: called, args: parse });
         }
 
         // Register the unnative calls between parenthesis
