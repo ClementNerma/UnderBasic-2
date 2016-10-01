@@ -239,8 +239,8 @@ const UnderBasic = (new (function() {
       return (parent.endsWith('*') ?
               type === parent.substr(0, parent.length - 1) :
               (parent.endsWith('~') ? false : type === parent))
-              || parent === 'mixed*' || parent === 'mixed';
-
+              || parent === 'mixed*' || parent === 'mixed'
+              || type === 'mixed';
     // Now we know that's not a pointer, so, if the expected type is a pointer...
     if(parent.endsWith('*'))
       // Return false
@@ -269,7 +269,7 @@ const UnderBasic = (new (function() {
         return (['expression', 'number', 'mixed']).includes(parent);
 
       // Check the type
-      return !expr.failed && (expr.type === parent || parent === 'mixed');
+      return !expr.failed && (expr.type === parent || expr.type === 'mixed' || parent === 'mixed');
     }
 
     // Parse the content
@@ -284,7 +284,7 @@ const UnderBasic = (new (function() {
       return (['expression', 'number', 'mixed']).includes(parse.type);
 
     // Here we have a successfully parsed content, we check its type...
-    return (parse.type === parent || parent === 'mixed');
+    return (parse.type === parent || expr.type === 'mixed' || parent === 'mixed');
   };
 
   /**
