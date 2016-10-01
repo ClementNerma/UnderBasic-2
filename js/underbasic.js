@@ -192,7 +192,7 @@ const UnderBasic = (new (function() {
     // Set he last parsed content (used to avoid infinite loops)
     last_parsed = content;
     // The parsed expression
-    let parsed = this.parse(content, extended, variables);
+    let parsed = this.parse(content, variables, UBL.functions);
     // If that code is runned, that's not an infinite loop
     last_parsed = null;
     // If an error occured while parsing...
@@ -528,7 +528,7 @@ const UnderBasic = (new (function() {
         // If it's no null...
         if(assign) {
           // Parse it
-          let parsed = this.parse(assign, false, variables);
+          let parsed = this.parse(assign, variables, UBL.functions);
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -705,7 +705,7 @@ const UnderBasic = (new (function() {
           line = match[1] + match[2] + '(' + match[3] + ')';
 
         // The result of the line's parsing
-        let result = this.parse(line, null, variables, false);
+        let result = this.parse(line, variables, UBL.functions);
         // If an error occured during the parsing...
         if(result.failed)
           return _formatError(line, result);
@@ -728,549 +728,480 @@ const UnderBasic = (new (function() {
     };
   };
 
+  // Rewrite this file step by step for the UnderBasic project
+  // And make a lot of commits with it to permit backtracing for errors that can
+  // happens in this program after a change.
+
   /**
     * Parse an expression
     * @param {string} expr
-    * @param {boolean} [extended]
-    * @param {object} [variables]
-    * @returns {object} parsed
+    * @param {object} [vars] Scope variables
+    * @param {object} [functions] Scope functions
+    * @param {string} [separator] Consider it the expression as a set of expressions, separated by a single character
+    * @returns {object}
     */
-  this.parse = (expr, extended = false, variables = {}, voidAsInstruction = true, global_type, fullExpr, startI) => {
-    // This function is derived from the Expression.js library which doesn't
-    // have a code documentation.
+  this.parse = (expr, vars = {}, functions = {}, separator) => {
+    /**
+      * Generate an error object
+      * @param {string} type The error's type, in one letter
+      * @param {string} msg
+      * @param {number|object} [sub] Subtract a column index OR the variables
+      * @param {number} [sub2] Substract a column index (use if variables are given)
+      * @returns {object} The error object
+      */
+    function error(type, msg, sub = 0, sub2 = 0) {
+      // The error object to return
+      let err = _error(
+        ({
+          A: 'Argument mismatch',
+          D: 'Data type',
+          R: 'Reference error',
+          S: 'Syntax error',
+          T: 'Type mismatch'
+        })[type] + ' : ' + msg,
+        (typeof sub === 'object' ? sub : {}),
+        i - (typeof sub === 'number' ? sub : 0) - sub2
+      );
 
-    function _e(msg, add = 0) {
-      return _error(msg, i + (startI - 2 || -1) + 1 + add);
+      // Attach informations
+      err.parse_type    = type;
+      err.parse_message = msg;
+      err.parse_errvars = (typeof sub === 'object' ? sub : {});
+
+      // Return the object
+      return err;
     }
 
-    // Integer buffer
-    let buffInt = '';
-    // Decimal buffer
-    let buffDec = '';
-    // Is it a floating value ?
-    let floating = false;
-    // Current operator
-    let operator = '';
-    // Letters buffer, used for variables and functions name
-    let buffLetter = '';
-    // String buffer, used for quoted values, e.g. "Hello World"
-    let buffString = '';
-    // List of the numbers found in the expression
-    let numbers = [];
-    // ???
-    let $ = -1;
-    // ???
-    let get;
-    // Parts of the expression that follow somes special operation rules
-    let parts = [];
-    // Current character in the expression
-    let char;
-    // The current column in the expression
+    /**
+      * Build the final object to return
+      * NOTE: The code is put into a separated function because it is used twice
+      * @param {boolean} [forceClassic] Force the function to return the classic object (prevent for returning a set)
+      * @returns {object}
+      */
+    function buildReturn(forceClassic = false) {
+      // If the expression was composed of a set...
+      if(separator && !forceClassic)
+        // Return the set
+        return set;
+      else // If that was a standard expression...
+        return {
+          type: g_type || 'number',
+          static: !!(staticType)
+        };
+    }
+
+    // The most part of the assignments are just here to see the variables' type
+    // The current operator
+    // NOTE: It can contains 2 character if it's a composed operator
+    let op = '';
+    // Is that a composed operator ?
+    let composed_op = false;
+    // The buffer (one unique buffer for any content, number or list...)
+    let buff = '';
+    // How many characters passed since the beginning of the part ?
+    let passed = 0;
+    // The global type of the expression
+    let g_type = null;
+    // Current part's type
+    let p_type = '';
+    // Is the part finished ?
+    let p_ends = false;
+    // Has the expression a static type ?
+    let staticType = false;
+    // The current character
+    let char = '';
+    // The current column index
     let i = 0;
-    // The number of parenthesis opened
-    let p_count = 0;
-    // The content between the two parenthesis (sub-expression or function arguments)
-    let p_buff = '';
-    // The name of the function that is currently called
-    let functionCall = [];
-    // The arguments of the currently called function
-    let callfunc = [];
-    // ???
-    let functionIndex = [];
-    // Arguments given to the called function
-    let callBuffs = [];
-    // The current function in the array
-    let func = 0;
-    // ???
-    let j;
-    // Is there a string opened ?
-    let stringOpened = false;
-    // The column where the function was called
-    let functionColumn = [];
-    // The static type of the expression
-    let staticType;
-    // Ignore the next comma (used for embricked functions call)
-    let ignoreNextComma = false;
-    // The referers used for arguments types checking
-    let referers = [];
-    // The global expression's type
-    let g_type = global_type || null;
-    // Is the expression an instruction call ?
-    let isInstruction = false;
-    // The combination operator
-    let combination = '';
-    // The number on the left of the operator
-    let leftCombination = '';
+    // Was any operation performed before ?
+    let alreadyOps = false;
 
-    // Add a '+' because the last part of the expression must be parsed too
-    expr += '+';
+    // === For expressions set only ===
+    // The expression set
+    let set = [];
+    // The current content, it's all characters since the last separator or the
+    // beginning of the expression
+    let content = '';
+    // Can we perform a separation ?
+    let canSeparate = false;
+    // Force the current character to be considered as a '+'
+    let forcePlus = false;
+    // The content's length increase (when a space is ignored, this variable is
+    // increased)
+    let orgLength = 0;
+    // Number of characters passed since the beginning of the expression
+    let fromBeginning = 0;
+    // Spaces at the beginning of the expression
+    let beginningSpaces = 0;
 
-    // For each char in the expression...
-    for(char of expr) {
-      // Increase the column number
-      i++;
+    // If the expression is empty...
+    if(!expr.trim())
+      expr = '0';
 
-      // '(' symbol
-      if(char === '(') {
-        // If that's just a simple parenthesis opening
-        if(p_count && !buffLetter) {
-          p_count += 1;
-          p_buff  += '(';
-          continue ;
+    // Add an operation at the end of the expression to calculate the last part
+    expr += separator || '+';
+
+    // For each character in the expression...
+    for(i = 0; i < expr.length; i++) {
+      // Get the current character
+      char = forcePlus ? '+' : expr.charAt(i);
+      if(forcePlus) forcePlus = false;
+
+      // Ignore spaces...
+      if(char === ' ') {
+        // But increment the passed characters counter
+        // If a content was specified into the buffer, the spaces before contents
+        // are ignored
+        if(buff)
+          passed ++;
+
+        // If there is no content in the buffer, and if we are in an expression
+        // set, increase the 'spaces at the beginning' counter
+        if(!content && separator) {
+          beginningSpaces ++;
         }
 
-        let a = buffInt, b = buffDec, c = buffString, d = buffLetter;
+        // Increase the original content length
+        // This permit to know, even if the plain content was trimmed of its
+        // spaces, its original length (especially for errors positions)
+        if(separator)
+          orgLength ++;
 
-        // If the current value is a number...
-        if(buffInt || buffDec)
-          return _e('Opening parenthesis just after a number');
-
-        // If the current value is a string...
-        if(buffString)
-          return _e('Opening parenthesis just after a string');
-
-        // If the current value is a name...
-        // That should be a function
-        if(buffLetter) {
-          // If the function doesn't exist
-          if(!UBL.functions.hasOwnProperty(buffLetter))
-            return _e('Unknown function "' + buffLetter + '"', -buffLetter.length - 1);
-
-          // If the function is 'void'-typed
-          if(UBL.functions[buffLetter][0] === 'void' || UBL.functions[buffLetter][0] === 'inst') {
-            // If the 'void' type is forbidden...
-            if(voidAsInstruction)
-              return _e('That\'s a static instruction, can\'t be used here');
-
-            // If there were already some operations...
-            if(numbers.length)
-              return _e('Type mismatch : Can\'t use the "void" type here', -buffLetter.length - 1);
-
-            // Set the global type as 'void'
-            g_type = 'void';
-          }
-
-          // Set the called function name
-          functionCall.push(buffLetter);
-          // Set the column where the function was called
-          functionColumn.push(i);
-          // Set the needed arguments of the function
-          callfunc.push(UBL.functions[buffLetter].slice(1));
-          // ???
-          functionIndex.push(p_count + 1);
-
-          // If there is another function call after this one...
-          if(functionCall.length > 1) {
-            // Add an argument referer to it
-            callBuffs.last().push('$' + buffLetter);
-            // Reserve this referer
-            referers.push(buffLetter);
-          }
-
-          // Set the arguments
-          callBuffs.push([]);
-          // Reset the buffer
-          p_buff = '';
-        }
-
-        buffLetter = d;
-
-        if(!p_count)
-          p_buff = '';
-
-        p_count += 1;
-
-        if(p_count === 1)
-          continue ;
-      } else
-      // That should be the end of a sub-expression or a function call
-      if(char === ')') {
-        // If that was a function call...
-        if(functionCall.length && p_count === functionIndex.last()) {
-          if(p_buff) // Fix a bug when script calls a function without any argument
-            callBuffs.last().push(p_buff);
-
-          // Defined a column for debugging
-          let col = functionColumn.last();
-          // The argument's number
-          let index = 0;
-
-          // If there are too many arguments...
-          if(callBuffs.last().length > callfunc.last().length)
-            return _e('Too many arguments : function ' + functionCall.last() + ' requires only ' + callfunc.last().length + ' arguments, ' + callBuffs.last().length + ' given');
-
-          // If some arguments are missing and the missing ones are not
-          // optionnals...
-          if(callBuffs.last().length < callfunc.last().length && !callfunc.last()[callBuffs.last().length].startsWith('['))
-            return _e('Missing ' + (callfunc.last().length - callBuffs.last().length) + ' arguments', -1 /* strangely the -1 is needed here... bug ? */);
-
-          if(callBuffs.length && callBuffs.last()[0] && callBuffs.last()[0].startsWith('('))
-            callBuffs.last()[0] = callBuffs.last()[0].substr(1);
-
-          // For each argument given...
-          for(let buff of callBuffs.last()) {
-            // If this argument is a referer...
-            if(buff.startsWith('$') && referers.includes(buff.substr(1))) {
-              // Remove the buffer's first symbol
-              buff = buff.substr(1);
-              // Remove the referer
-              referers.splice(referers.indexOf(buff), 1);
-              // Set the type from the function's one
-              get = { failed: false /* not needed but specified for a better readibility */,
-                      type: UBL.functions[buff][0] };
-            } else { // Else, that's a normal argument
-              get = this.parse(buff.trim(), extended, variables, voidAsInstruction, undefined, undefined, expr, col);
-
-              // If failed to parse the content
-              if(get.failed)
-                return get;
-            }
-
-            index ++;
-
-            // If that's not the type we expect for...
-            if(!this.match(buff.trim(), callfunc.last()[index - 1], variables, get))
-              return _e('Argument ' + index + ' must be a ' + callfunc.last()[index - 1].replace(/^\[(.*)\]$/, '$1') + ', ' + get.type + ' given', col - i + (buff.match(/^ +/) || [''])[0].length);
-
-            col += buff.length + 1;
-          }
-
-          // Add a new part
-          parts.push({ function: functionCall.last(), arguments: callBuffs.last() });
-
-          // If there is still a function call...
-          if(functionCall.length > 1)
-            ignoreNextComma = true;
-          else { // Else...
-            // If the function returned a static type...
-            if(staticTypes.includes(UBL.functions[functionCall[0]][0]))
-              staticType = UBL.functions[functionCall[0]][0];
-          }
-
-          // Remove the function call
-          functionCall.pop();
-          functionIndex.pop();
-          functionColumn.pop();
-          callBuffs.pop();
-          callfunc.pop();
-
-          // Reset variables
-          buffInt = '$' + (++$);
-          buffLetter = '';
-          floating = false;
-          // Indicates that a parenthesis was close
-          p_count -= 1;
-          p_buff = '';
-          // Ignore the next instructions
-          continue ;
-        }
-
-        // Here, we know that wasn't a function call
-        // If no parenthesis was opened...
-        if(!p_count)
-          return _e('No parenthesis is opened');
-
-        // Indicates that the parenthesis was closed
-        p_count -= 1;
-
-        // If there is no more parenthesis...
-        if(!p_count) {
-          // If there was a value specified between the parenthesis...
-          if(p_buff) {
-            // Parse it !
-            get = this.parse(p_buff, extended, variables, voidAsInstruction, g_type, expr, i - p_buff.length);
-
-            // If the parse failed...
-            if(get.failed)
-              // Return the error
-              return get;
-
-            // If there is only one number, don't consider it as a sub-expression
-            // but as a single value, that permit to reduce the final object's
-            // size and the evaluation speed.
-            if(get.numbers.length === 1 && !get.numbers[0].startsWith('$'))
-              // Optimization
-              buffInt = get.numbers[0];
-            else {
-              // Indicates that this number is a part of an expression
-              buffInt = '$' + (++$);
-              // Add the sub-expression
-              parts.push(!get.parts.length ? get.numbers : get);
-            }
-
-            // Ignore the next instructions
-            continue ;
-          } else
-            // If no content was specified between the parenthesis...
-            return _e('No content between parenthesis', -2);
-        }
-      } else
-      // If this is a function call and the current character is ','
-      // that corresponds to the arguments separator
-      if(functionCall.length && char === ',') {
-        // If the next comma needs to be ignored...
-        if(ignoreNextComma)
-          continue ;
-
-        // If there is already the same number of arguments in the call and in
-        // the function's declaration... (in fact we're checking for the right
-        // number of arguments LESS 1, because there is still one argument
-        // after the ',' separator)
-        if(callBuffs.last().length === callfunc.last().length - 1)
-          return _e('Too many arguments, function "' + functionCall.last() + '" needs only ' + callfunc.length + ' arguments', -1);
-
-        // Add the argument to the list
-        callBuffs.last().push(p_buff);
-        // Reset the argument buffer
-        p_buff = '';
-        // Ignore the nex instructions
         continue ;
       }
 
-      // If there is still parenthesis
-      if(p_count) {
-        // Add the char to the buffer
-        p_buff += char;
-        // Ignore the next instructions
-        continue ;
-      }
+      // Update the 'content' variable if the expression is composed of a set...
+      // This code is put after the space checking because the spaces are ignored
+      // in the final expressions
+      if(separator)
+        content += char;
 
-      // If the current char is '"'
-      // AND if the current value is a string...
-      if(char === '"' && stringOpened) {
-        // Then that's the closing string symbol
-        // Indicates that the string is closed now
-        stringOpened = false;
-        // Add the char to the buffer
-        buffString  += '"';
-        // Ignore the next instructions
-        continue ;
-      }
-
-      // If a string is opened
-      if(stringOpened) {
-        // Add this character to the buffer
-        buffString += char;
-        // Ignore the next instructions
-        continue ;
-      }
-
-      // If the char is a space...
-      if(char === ' ' || char === String.fromCharCode(160)) {
-        // If we're in a function call...
-        if(functionCall.length)
-          // Add it to the buffer
-          p_buff += ' ';
-
-        // Else, it's ignored
-        // Ignore the next instructions
-        continue ;
-      }
-
-      // If the current character is an operator...
-      if('+-*/^'.indexOf(char) !== -1) {
-        // Here is the buffer
-        let buff = buffString || buffLetter || (!floating ? buffInt : buffInt + '.' + buffDec);
-        // Is there already one or more operations on this part of the expression ?
-        let someOps = !!numbers.length;
-        // Position at the buffer's beginning
-        let bl = - /* negative value */ (buff.length + 1 /* we're at the operator char, next to the buffer */);
-
-        // If that's the last operator and no value was given...
-        if(i === expr.length && !buff)
-          return _e('Missing something here', -2);
-
-        // If that's not the last operator but the 'void' type was used...
-        if(i !== expr.length && (g_type === 'void' || g_type === 'inst'))
-          return _e('Can\'t use operations with a void function');
-
-        // If that's not the last operator and the type is static...
-        if(i !== expr.length && staticType)
-          return _e('Type "' + staticType + '" is a static type, operations are not supported');
-
-        // If the operator is '-' and no operation was done...
-        if(char === '-' && !numbers.length) {
-          // That's the negative symbol, not an operator. But because the parser
-          // only supports operators, put a '0' instead of the empty buffer.
-          buff = '0';
-        }
-
-        if(!buff)
-          return _e('Missing number before operator', bl);
-
-        if(floating && !buffDec)
-          return _e('Missing decimal part of floating number', bl);
-
-        if(g_type === 'string' && char !== '+')
-          return _e('Only the "+" operator is allowed in string expressions', bl);
-
-        // If a combination was used...
-        if(combination) {
-          // If the combination is not known...
-          if(!combinations.includes(combination))
-            return _e('Invalid combinations syntax');
-
-          // Set the buffer
-          buff = leftCombination + ' ' + combination + ' ' + buff;
-        }
-
-        numbers.push(buff);
-
-        // The last item
-        let item = buff, type;
-
-        // If the item is a sub-expression...
-        if(item.startsWith('$')) {
-          // If that's a function call...
-          if(parts[item.substr(1)].function) {
-            // The item has the type of the function it refers to
-            type = UBL.functions[parts[item.substr(1)].function][0];
-            // If that's an instruction
-            if(type === 'inst') {
-              // Use the 'void' type instead
-              type = 'void';
-              // Indicates that we are using an instruction
-              isInstruction = true;
-            }
-          } else // If that's a sub-expression...
-            // The item has the type of the sub-expression
-            type = parts[item.substr(1)].type;
-        } else
-        // If it's a combination...
-        if(combination)
-          type = 'number';
-        else // If it's a "normal" content
-          // Get the item's type
-          type = UnderBasic.getType(item, extended, variables);
-
-        // Check types
-        if(typeof type === 'object')
-          return _e(type.content, bl);
-
-        // If that's a static type...
-        // AND there were already some operation(s) before...
-        if(staticTypes.includes(type)) {
-          if(someOps)
-            return _e('Type "' + type + '" is a static type and doesn\'t support operations');
-
-          staticType = type;
-        }
-
-        // If the type is different from the global one...
-        // Excepted the 'number' type, which can use operations on any
-        // non-static type.
-        if(g_type && type !== g_type && g_type !== 'number' && type !== 'number')
-          return _e('Type mismatch : Can\'t use operations between ' + g_type + ' and ' + type);
-
-        // If the type is not number
-        // OR there is no type set
-        // If the global type is 'list', and that list is divided by 2, the type
-        // must NOT change, so the 'number' type don't have to override the
-        // 'list' one.
-        // Also, ignore the 'mixed' type
-        if(type !== 'number' && type !== 'mixed' || !g_type)
-          // Set the type as global
-          g_type = type;
-
-        // Add the number to the list
-        numbers.push(char);
-        // Set the (new) current operator
-        operator = char;
-
-        // Reset current number
-        buffInt     = '';
-        buffDec     = '';
-        buffLetter  = '';
-        buffString  = '';
-        combination = '';
-        floating    = false;
-        leftCombination = null;
-      } else
-      // If it's a digit...
-      if('0123456789'.indexOf(char) !== -1) {
-        if(buffLetter)
-          buffLetter += char;
-        else if(g_type === 'string')
-          return _e('Can\'t put a number into a string expression');
-        else if(!floating)
-          buffInt += char;
-        else
-          buffDec += char;
-      } else
-      // If it's a point (integer-decimal separator symbol)
-      if(char === '.') {
-        if(floating)
-          return _e('Can\'t use two times the "." symbol in a number');
-
-        if(buffString)
-          return _e('Can\'t use the "." symbol after a string');
-
-        if(buffLetter)
-          return _e('Can\'t use the "." symbol after a name');
-
-        if(!buffInt)
-          buffInt = '0';
-
-        floating = true;
-      } else
-      // If it's a letter...
-      if(char.match(/[a-zA-Z_]/)) {
-        // If a number was specified...
-        if(buffInt || floating || buffString ||combination) {
-          // If the following operations were not already do...
-          if(!combination) {
-            // Define it as the left part of combination
-            leftCombination = buffString || (buffInt + (floating ? '.' : '') + buffDec);
-            // Reset the buffers
-            buffInt = ''; buffDec = ''; floating = null;
-          }
-
-          // Set the combination operator symbol
-          combination += char;
-        } else
-          buffLetter += char;
-      } else
-      // If that's a quote...
+      // Parenthesis
       if(char === '"') {
-        stringOpened = true;
-        buffString   = '"';
+        // There musn't be a buffer, else there is already a content specified
+        // here
+        if(buff)
+          return error('S', 'Can\'t put a quote here');
+
+        // Increase the column index, else the first character seen by the loop
+        // will be the opening quote...
+        i++;
+        // Reset character
+        char = '';
+
+        // While there is no closing quote...
+        while(char !== '"' && i < expr.length) {
+          // Add the current character to the string
+          char = expr.charAt(i);
+          // Append the character to the buffer
+          buff += char;
+          // Add the character to the content buffer
+          if(separator)
+            content += char;
+          // Increase the column index
+          i ++;
+        }
+
+        // If no quote was encountered...
+        if(char !== '"')
+          return error('S', 'Missing closing quote');
+
+        // Set the part's type
+        p_type = 'string';
+        // Mark the part as finished
+        p_ends = true;
+        // Add the opening quote
+        buff = '"' + buff;
+        // Decrease the column index (I don't know why, but it works fine only
+        // with this decreasing, is that a BUG ?)
+        i --;
+        // Increase the 'passed' counter
+        passed += buff.length;
+        // Continue loop
+        continue ;
+      }
+
+      // Separator
+      if(char === separator) {
+        // Because the last item in the part will not be parsed (the last '+'
+        // only affects the entire expression), we need to add this symbol at the
+        // end of the part. For that, we add a '+' here, and set an interrupt to
+        // true. If we encounter the separator again after the '+', then we know
+        // that we can do the separation.
+        if(!canSeparate) {
+          i -= 2;
+          forcePlus = true;
+          canSeparate = true;
+          // Continue loop
+          continue ;
+        }
+
+        // Put the element into the set (force to return a parsed content)...
+        set.push(buildReturn(true));
+        // The current part
+        let part = set[set.length - 1];
+        // ...and add a few informations
+        part.plain = content.substr(0, content.length - 3);
+        // Attach the length
+        part.length = part.plain.length + orgLength;
+        // Attach the position from the beginning of the expression
+        part.fromStart = fromBeginning;
+        // Attach the position from the beginning of the expression (without the
+        // spaces put at the beginning of the part)
+        part.fromStartWithoutSpaces = part.fromStart + beginningSpaces;
+        // Update the current position from the beginning of the expression
+        fromBeginning += part.length + 1 /* Consider the comma */;
+        // Reset variables
+        op          = '';
+        composed_op = false;
+        buff        = '';
+        passed      = 0;
+        g_type      = null;
+        p_type      = '';
+        p_ends      = false;
+        staticType  = false;
+        content     = '';
+        canSeparate = false;
+        alreadyOps  = false;
+        orgLength   = 0;
+        beginningSpaces = 0;
+        // Continue loop
+        continue ;
+      }
+
+      // Operators
+      else if('+-*/&|^'.includes(char)) {
+        // If that's a composed operator
+        // And if that's just the beginning of the compose operator...
+        if('&|'.includes(char) && !composed_op) {
+          // Memorize the operator
+          op = char;
+          // Continue loop
+          continue ;
+        }
+
+        // If a composed operator was made,
+        // Here we're sure the current character won't finish it
+        if(composed_op)
+          return error('S', 'Expecting for the second part of a composed operator ${op}', { op: op + op });
+
+        // Set the operator
+        op += char;
+
+        // A buffer is needed for doing operations
+        // Here we also check for 'p_type' because when a content is given between
+        // parenthesis it is parsed internally and the buffer is reset, only the
+        // part's type is set.
+        if(!buff && !p_type) {
+          // The message changes if the operator is the auto-added '+' operator
+          if(i === expr.length)
+            return error('S', 'Expecting for an expression afeter the last operator');
+          else
+            return error('S', 'Expecting for an expression before an operator');
+        }
+
+        // Get the buffer's type
+        let type = p_type || this.getType(buff, true, vars);
+
+        // If the parse failed...
+        if(type.failed) {
+          // If the given content is a variable's name...
+          if(buff.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            return error('R', 'Variable "${name}" does not exist', { name: buff }, passed);
+          else // Else, that's an unknown kind of content
+            return error('S', 'Unable to parse content', passed);
+        }
+
+        // If the main type of the expression is 'string',
+        // The only supported operator is '+' (and the composed operators)
+        if(((g_type === 'string' || type === 'string') && op.length === 1 && op !== '+')
+         || (alreadyOps && type === 'string' && g_type !== 'string')
+         || (alreadyOps && type === 'number' && g_type === 'string'))
+          return error('D', 'Only the addition operator is allowed for strings', passed);
+
+        // If an instruction was specified...
+        // (Because g_type is defined we know that some operations already occured
+        // before)
+        if(g_type === 'void')
+          return error('S', 'Can\'t do operations on instructions', passed);
+
+        // If no global type was defined - if that's not a number
+        if(!g_type || g_type === 'number') {
+          // Define it
+          g_type = type;
+          // If needed, define the expression as static
+          if(staticTypes.includes(g_type))
+            staticType = g_type;
+        } else if(g_type)
+          // Here know a type was set up. If the part's type doesn't match with
+          // the global expression's one...
+          // BUT the numbers are allowed ! You can add a number to a list, for
+          // example, or multiply it by another
+          if(g_type !== type && g_type !== 'number' && type !== 'number')
+            return error('T', 'Expecting for a "${g_type}" value, "${type}" given', { g_type, type }, passed);
+
+        // Static types doesn't support any kind of operation
+        if(staticType && alreadyOps)
+          return error('S', 'Static type "${g_type}" does not support any operation', { g_type }, staticType === type ? i : passed);
+
+        // Indicates that an operation occured
+        alreadyOps = true;
+        // Clear all variables
+        buff = '';
+        op = '';
+        passed = 0;
+        p_type = '';
+        p_ends = false;
 
         continue ;
-      } else if(char === '$') {
-        // '$' is a special symbol which refers to a function call
-        // It can only be placed at the beginning of an argument
-        // So, if the buffer already contains some data...
-        if(buffLetter)
-          return _e('Syntax error : The arguments referer symbol cannot be used here');
+      } else if(composed_op) // If expecting a new part of an operator...
+        // EXPL: Here the operator is set, so it must be a composed operator !
+        return error('S', 'Expecting for the second part of a composed operator ${op}', { op: op + op });
+      else if(p_ends) // An operator is needed after any content
+        // EXPL: The type is declared after a content is finished (like a number)
+        return error('S', 'An operator is expected after any value');
 
-        // Set the buffer with that special symbol
-        buffLetter = '$'
-      } else
-        return _e('Syntax error : Unknown symbol');
+      // Opening parenthesis (used for expressions and functions call)
+      if(char === '(') {
+        // The sub-expression buffer
+        let _buff = '';
+        // The number of opened parenthesis
+        let openedP = 1;
+        // Was a quote opened ?
+        let openedQuote = false;
+        // The current column index
+        // It's a kind of backup because we'll override it soon
+        let org = i;
+        // The called function (if there is one)
+        let called = buff;
+        // The called function's content (functions[called])
+        let func = null;
+
+        // If the function's name is not valid...
+        if(called) {
+          // If the name is not valid...
+          if(!called.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+            return error('S', 'Can\'t put content before parenthesis');
+          else
+            // If that's a known functions...
+            if(!functions.hasOwnProperty(called))
+              return error('R', 'Function "${buff}" is not defined', { buff }, passed);
+
+          // Get the called function
+          func = functions[called];
+        }
+
+        // While the matching closing parenthesis is not reached...
+        while((char !== ')' || openedP || openedQuote) && (i < expr.length)) {
+          // Increase the column index
+          i ++;
+
+          // Set the current character
+          char = expr.charAt(i);
+
+          // Append the current char to the buffer
+          _buff += char;
+
+          // Quote
+          if(char === '"') {
+            // If there was an opened quote
+            if(openedQuote)
+              // Mark it as closed
+              openedQuote = false;
+            else
+              // Indicates that a quote was opened
+              openedQuote = true;
+          }
+
+          // If a quote is opened, ignore everything else
+          if(openedQuote)
+            continue ;
+
+          // Opening parenthesis
+          if(char === '(')
+            // Increase the opened parenthesis counter
+            openedP ++;
+
+          // Closing parenthesis
+          if(char === ')')
+            // Decrease the opened parenthesis counter
+            openedP --;
+        }
+
+        // If no parenthesis was encountered...
+        if(char !== ')')
+          // NOTE: Here we put the cursor to the beginning of the not-closed
+          //       string
+          return error('S', 'This parenthesis was not closed', i - org);
+
+        // Remove the string's last character (it's the closing parenthesis)
+        _buff = _buff.substr(0, _buff.length - 1);
+
+        // If no function was called and the buffer is empty, that's not a valid
+        // syntax (e.g. "3 * ()" is invalid)
+        if(!_buff.trim() && !called)
+          return error('S', 'Missing content between parenthesis');
+
+        // Define the position at the content's beginning
+        let begins = i - org - 1;
+
+        // Parse it
+        let parse = this.parse(_buff, vars, functions, called ? ',' : '');
+
+        // Catch parse errors
+        if(parse.failed)
+          return error(parse.parse_type, parse.parse_message, parse.parse_errvars, begins - parse.column);
+
+        // If a function was called...
+        if(called) {
+          // The expression was parsed using the comma separator
+          // Now we'll check if the call is valid.
+
+          // If arguments are missing...
+          if(parse.length < func.length - 1)
+            return error('A', 'Missing ${num} argument(s) for function "${called}"', { num: func.length - parse.length - 1, called }, begins);
+          // If there are too many arguments...
+          if(parse.length >= func.length) {
+            // Show a different error message if the function doesn't requires any
+            // argument
+            if(func.length === 1)
+              return error('A', 'Function "${called}" doesn\'t requires any argument', { called }, begins);
+            else
+              return error('A', 'Function "${called}" needs ${needs} argument(s), ${supplied} supplied', { called, needs: func.length - 1, supplied: parse.length }, begins);
+          }
+
+          // Check all arguments
+          // For each argument...
+          for(let i = 0; i < parse.length; i++) {
+            // If the given argument doesn't match with the expected type...
+            if(!this.match(parse[i].plain, func[i + 1], vars, parse[i]))
+              return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
+          }
+        }
+
+        // Define the type of the part
+        p_type = called ? functions[called][0] : parse.type;
+        // Mark it as finished
+        p_ends = true;
+        // Reset the buffer
+        buff = '';
+        // Update the content buffer
+        if(separator)
+          content += _buff + ')';
+        // Increase the 'passed' counter
+        passed += _buff.length + 2;
+        // Continue the loop
+        continue ;
+      }
+
+      // Put the character into the buffer
+      buff += char;
+      // Increase the 'passed' counter
+      passed ++;
     }
 
-    // If a parenthesis was not closed...
-    if(p_count)
-      return _e(p_count + ' parenthesis not closed');
-
-    // Push the last part of the expression
-    numbers.push(!floating ? buffInt : buffInt + '.' + buffDec);
-
-    // The response
-    let ret = { numbers: numbers.slice(0, numbers.length - 2), parts };
-    // Attach the expression's type
-    ret.type = g_type || staticType || 'number';
-    // If the expression was an instruction call...
-    if(isInstruction)
-      // Indicates it
-      ret.instruction = true;
-
-    // If there is still a buffer...
-    if(buffInt || buffDec || buffString || buffLetter)
-      return _e('Syntax error', -(buffInt || buffDec || buffString || buffLetter).length);
-
-    // Return the response !
-    return ret;
+    // SUCCESS !
+    // Return the result
+    return buildReturn();
   };
 
   // Export data into the library
