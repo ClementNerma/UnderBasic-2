@@ -1224,10 +1224,11 @@ const UnderBasic = (new (function() {
          || (alreadyOps && type === 'number' && g_type === 'string'))
           return error('D', 'Only the addition operator is allowed for strings', passed);
 
-        // If an instruction was specified...
+        // If a 'void' function or an instruction was used...
         // (Because g_type is defined we know that some operations already occured
         // before)
-        if(g_type === 'void' || (alreadyOps && type === 'void'))
+        if((g_type === 'void' || (alreadyOps && type === 'void'))
+        || (g_type === 'inst' || (alreadyOps && type === 'inst')))
           return error('S', 'Can\'t do operations on instructions', passed);
 
         // If no global type was defined - if that's not a number
