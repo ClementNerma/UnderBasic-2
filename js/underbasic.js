@@ -37,6 +37,31 @@ const UnderBasic = (new (function() {
     };
   }
 
+  /**
+    * Format an error object to be compatible with compiler's context
+    * @param {string} line
+    * @param {object} error
+    * @param {number} [inc_col] Increase the column index
+    * @returns {object} error
+    */
+  function _formatError(line, obj, inc_col = 0) {
+    // Increase the column index
+    obj.column += inc_col;
+
+    // === Set the message with debugging ===
+    // Define the part to display
+    let part = line.substr(obj.column < errorWidth ? 0 : obj.column - errorWidth, 2 * errorWidth + 1);
+    // Define the cursor's position
+    // The Math.max() function is used here to prevent negative values if the
+    // parser calculates a wrong cursor position.
+    let cursor = Math.max(obj.column < errorWidth ? obj.column : errorWidth, 0);
+    // Set the new message
+    obj.content = `ERROR : At column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
+
+    // Return the final error object
+    return obj;
+  }
+
   /** The known types
     * @type {array} */
   const types = [ "number", "string", "list", "matrix", "yvar", "picture", "gdb" ];
@@ -448,31 +473,7 @@ const UnderBasic = (new (function() {
       * @returns {object}
       */
     function error(message, params, column) {
-      return formatError(_error(message, params, column));
-    }
-
-    /**
-      * Format an error object to be compatible with compiler's context
-      * @param {object} error
-      * @param {number} [inc_col] Increase the column index
-      * @returns {object} error
-      */
-    function formatError(obj, inc_col = 0) {
-      // Increase the column index
-      obj.column += inc_col;
-
-      // === Set the message with debugging ===
-      // Define the part to display
-      let part = line.substr(obj.column < errorWidth ? 0 : obj.column - errorWidth, 2 * errorWidth + 1);
-      // Define the cursor's position
-      // The Math.max() function is used here to prevent negative values if the
-      // parser calculates a wrong cursor position.
-      let cursor = Math.max(obj.column < errorWidth ? obj.column : errorWidth, 0);
-      // Set the new message
-      obj.content = `ERROR : At column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
-
-      // Return the final error object
-      return obj;
+      return _formatError(line, _error(message, params, column));
     }
 
     // Split code into lines
@@ -530,7 +531,7 @@ const UnderBasic = (new (function() {
           let parsed = this.parse(assign, false, variables);
           // If an error occured...
           if(parsed.failed)
-            return formatError(parsed, match[1].length + match[2].length + match[3].length + shift);
+            return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
           // Set it's type
           a_type = parsed.type;
         }
@@ -664,7 +665,7 @@ const UnderBasic = (new (function() {
 
         // If this type is not known...
         if(typeof type === 'object')
-          return formatError(type, pos);
+          return _formatError(line, type, pos);
 
         // If that's not the same type as the variable...
         if(type !== variables[match[1]])
@@ -707,7 +708,7 @@ const UnderBasic = (new (function() {
         let result = this.parse(line, null, variables, false);
         // If an error occured during the parsing...
         if(result.failed)
-          return formatError(result);
+          return _formatError(line, result);
         // Output
         // If that's NOT an instruction...
         if(!result.instruction)
