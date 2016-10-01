@@ -93,6 +93,10 @@ const UnderBasic = (new (function() {
     * @type {number} */
   let errorWidth = 20;
 
+  /** The current unnative calls catcher
+    * @type {function|void} */
+  let _currentUnnativeCatcher = null;
+
   // The last parsed content (used to avoid infinite loops)
   let last_parsed;
 
@@ -192,7 +196,7 @@ const UnderBasic = (new (function() {
     // Set he last parsed content (used to avoid infinite loops)
     last_parsed = content;
     // The parsed expression
-    let parsed = this.parse(content, variables, functions);
+    let parsed = this.parse(content, variables, functions, null, _currentUnnativeCatcher);
     // If that code is runned, that's not an infinite loop
     last_parsed = null;
     // If an error occured while parsing...
@@ -483,7 +487,7 @@ const UnderBasic = (new (function() {
         // If something is assigned...
         if(assign) {
           // Parse it
-          parsed = this.parse(assign, variables, functions);
+          parsed = this.parse(assign, variables, functions, null, (error) => error('Unnative calls are not currently supported in variables declaration'));
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -619,7 +623,7 @@ const UnderBasic = (new (function() {
         // The content's position in the string
         let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
         // First, we parse the given result...
-        let parsed = this.parse(match[6], variables, functions);
+        let parsed = this.parse(match[6], variables, functions, null, (error) => error('Unnative calls not currently supported here'));
         // The variable's type
         let type = this.getType(match[6], variables, functions, parsed);
 
@@ -856,10 +860,13 @@ const UnderBasic = (new (function() {
           line = match[1] + match[2] + '(' + match[3] + ')';
 
         // The result of the line's parsing
-        let result = this.parse(line, variables, functions);
+        let result = this.parse(line, variables, functions, null, (error, name, args) => {
+          return error('S', 'Unnative calls are not supported for the moment')
+        });
         // If an error occured during the parsing...
         if(result.failed)
           return _formatError(line, result, null, row);
+
         // Output
         // If that's NOT an instruction...
         if(!result.instruction)
@@ -891,7 +898,7 @@ const UnderBasic = (new (function() {
     * @param {string} [separator] Consider it the expression as a set of expressions, separated by a single character
     * @returns {object}
     */
-  this.parse = (expr, vars = {}, functions = {}, separator) => {
+  this.parse = (expr, vars = {}, functions = {}, separator, unnativeCatcher) => {
     /**
       * Generate an error object
       * @param {string} type The error's type, in one letter
@@ -946,6 +953,9 @@ const UnderBasic = (new (function() {
           unnativeCalls: unnative
         };
     }
+
+    // Backup the current unnative event catcher
+    _currentUnnativeCatcher = unnativeCatcher;
 
     // If the native functions are not present, but functions were specified...
     if(Object.keys(functions).length && !functions['$'] /* There is a '$' field in UBL.functions */) {
@@ -1332,7 +1342,7 @@ const UnderBasic = (new (function() {
         let begins = i - org - 1;
 
         // Parse it
-        let parse = this.parse(_buff, vars, functions, called ? ',' : '');
+        let parse = this.parse(_buff, vars, functions, called ? ',' : '', unnativeCatcher);
 
         // Catch parse errors
         if(parse.failed)
@@ -1364,11 +1374,47 @@ const UnderBasic = (new (function() {
               return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
           }
 
-          if(!UBL.functions.hasOwnProperty(called))
-            // If this function is not a native one, register this call into the
-            // 'unnative' list
-            unnative.push({ name: called, args: parse });
-        }
+          if(!UBL.functions.hasOwnProperty(called)) {
+            // If this function is not a native one...
+            // We first call event catcher (if specified)
+            if(unnativeCatcher) {
+              /** Content returned by the catcher
+                * @type {object|string} */
+              let ret = unnativeCatcher(error, called, parse);
+
+              // If an error was returned...
+              if(ret.failed)
+                // Throw it
+                return ret;
+
+              // Consider it
+              // Update the formatted buffer by replacing the function's call
+              // and its arguments by the returned content (if a content was
+              // specified)
+              if(typeof ret !== 'undefined')
+                formatted = formatted.replace(/[a-zA-Z0-9_]+ *\($/, '') + ret;
+              // Else, just update the buffer by the standard way
+              // The problem is that this code is repeated 3 times, not
+              // according to the DRYS convention... But that would be
+              // complicated to solve this problem, or by adding a variable and
+              // conditions checking, which may reduces lisibility and makes
+              // the program a bit slower (invisible for humans, for slower)
+              else
+                formatted += parse.formatted + ')';
+            } else { // If no catcher was specified...
+              // Register this call into the 'unnative' list
+              unnative.push({ name: called, args: parse });
+              // Update the formatted buffer
+              // We put this code after the 'else' because the added content is not
+              // the same if there was an event catcher or not
+              formatted += parse.formatted + ')';
+            }
+          }
+        } else
+          // Update the formatted buffer
+          // We put this code after the 'else' because the added content is not
+          // the same if that was a function call or not
+          formatted += parse.formatted + ')';
 
         // Register the unnative calls between parenthesis
         unnative = unnative.concat(parse.unnativeCalls);
@@ -1382,8 +1428,6 @@ const UnderBasic = (new (function() {
         // Update the content buffer
         if(separator)
           content += _buff + ')';
-        // Update the formatted buffer
-        formatted += parse.formatted + ')';
         // Increase the 'passed' counter
         passed += _buff.length + 2;
         // Continue the loop
