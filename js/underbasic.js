@@ -909,9 +909,9 @@ const UnderBasic = (new (function() {
         // Output
         // If that's NOT an instruction...
         if(!result.instruction)
-          output.push(format(rmspace(line, true)));
+          output.push(result.formatted);
         else // If that IS an instruction...
-          output.push(format(rmspace(line, true).replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2')))
+          output.push(result.formatted.replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2'));
       }
     }
 
@@ -980,11 +980,14 @@ const UnderBasic = (new (function() {
       if(separator && !forceClassic) {
         // Attach the 'unnative' data to the set...
         set.unnativeCalls = unnative;
+        // ...the formatted content...
+        set.formatted = formatted.replace(/\+$/, '') /* Remove the last '+' character */;
         // ...and return it
         return set;
       } else // If that was a standard expression...
         return {
           type: g_type || 'number',
+          formatted: formatted.replace(/\+$/, '') /* Remove the last '+' character */,
           static: !!(staticType),
           unnativeCalls: unnative
         };
@@ -1036,6 +1039,8 @@ const UnderBasic = (new (function() {
     let alreadyOps = false;
     // Non-native functions calls
     let unnative = [];
+    // The final formatted buffer
+    let formatted = '';
 
     // === For expressions set only ===
     // The expression set
@@ -1096,6 +1101,8 @@ const UnderBasic = (new (function() {
       // in the final expressions
       if(separator)
         content += char;
+      // Update the formatted buffer
+      formatted += char;
 
       // Parenthesis
       if(char === '"') {
@@ -1119,6 +1126,8 @@ const UnderBasic = (new (function() {
           // Add the character to the content buffer
           if(separator)
             content += char;
+          // Update the formatted buffer
+          formatted += char;
           // Increase the column index
           i ++;
         }
@@ -1172,6 +1181,8 @@ const UnderBasic = (new (function() {
         part.fromStartWithoutSpaces = part.fromStart + beginningSpaces;
         // Update the current position from the beginning of the expression
         fromBeginning += part.length + 1 /* Consider the comma */;
+        // Update the formatted content
+        formatted = formatted.substr(0, formatted.length - 3);
         // Reset variables
         op          = '';
         composed_op = false;
@@ -1417,6 +1428,8 @@ const UnderBasic = (new (function() {
         // Update the content buffer
         if(separator)
           content += _buff + ')';
+        // Update the formatted buffer
+        formatted += parse.formatted + ')';
         // Increase the 'passed' counter
         passed += _buff.length + 2;
         // Continue the loop
