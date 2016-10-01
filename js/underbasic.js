@@ -976,6 +976,26 @@ const UnderBasic = (new (function() {
         };
     }
 
+    // If the native functions are not present, but functions were specified...
+    if(functions && !functions['$'] /* There is a '$' field in UBL.functions */) {
+      // The '$' field permit to detect that the native library is present
+      // Because compiler doesn't allow '$' symbol in functions names, that will
+      // not make any problem
+
+      // Backup the original functions library
+      let lib = functions;
+      // Put the library into the 'functions' object
+      // Here we use 'JSON' model because if we just take UBL.functions, when
+      // we'll modify any function, it will override the original library
+      functions = JSON.parse(JSON.stringify(UBL.functions));
+      // Now we can merge the two objects. We injected the original library and
+      // next we merge the given functions because the merge operation is the
+      // slowest one, so we have to have the smallest amount of functions
+      // as we can, here we just have to merge the given functions.
+      for(let name of Reflect.ownKeys(lib))
+        functions[name] = lib[name];
+    }
+
     // The most part of the assignments are just here to see the variables' type
     // The current operator
     // NOTE: It can contains 2 character if it's a composed operator
