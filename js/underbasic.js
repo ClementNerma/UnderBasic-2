@@ -202,6 +202,11 @@ const UnderBasic = (new (function() {
       parent = parent.substr(1, parent.length - 2);
     }
 
+    // If the expected type is 'label'...
+    if(parent === 'label')
+      // Return the result
+      return !!content.match(/^[A-Z0-9]{1,2}$/);
+
     // Get type, throught the variables or considering it's a variable name
     let type = variables && variables.hasOwnProperty(content) ? variables[content] : this.getVarType(content, true);
     // If a type was found...
