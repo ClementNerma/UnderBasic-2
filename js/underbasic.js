@@ -863,6 +863,7 @@ const UnderBasic = (new (function() {
         let result = this.parse(line, variables, functions, null, (error, name, args) => {
           return error('S', 'Unnative calls are not supported for the moment')
         });
+
         // If an error occured during the parsing...
         if(result.failed)
           return _formatError(line, result, null, row);
@@ -1047,9 +1048,8 @@ const UnderBasic = (new (function() {
 
         // If there is no content in the buffer, and if we are in an expression
         // set, increase the 'spaces at the beginning' counter
-        if(!content && separator) {
+        if(!content && separator)
           beginningSpaces ++;
-        }
 
         // Increase the original content length
         // This permit to know, even if the plain content was trimmed of its
@@ -1065,6 +1065,7 @@ const UnderBasic = (new (function() {
       // in the final expressions
       if(separator)
         content += char;
+
       // Update the formatted buffer
       formatted += char;
 
@@ -1146,7 +1147,7 @@ const UnderBasic = (new (function() {
         // Update the current position from the beginning of the expression
         fromBeginning += part.length + 1 /* Consider the comma */;
         // Update the formatted content
-        formatted = formatted.substr(0, formatted.length - 3);
+        formatted = formatted.substr(0, formatted.length - 2);
         // Reset variables
         op          = '';
         composed_op = false;
@@ -1341,6 +1342,9 @@ const UnderBasic = (new (function() {
         // Define the position at the content's beginning
         let begins = i - org - 1;
 
+        // Was the formatting changed ?
+        let changedFormatting = false;
+
         // Parse it
         let parse = this.parse(_buff, vars, functions, called ? ',' : '', unnativeCatcher);
 
@@ -1391,29 +1395,19 @@ const UnderBasic = (new (function() {
               // Update the formatted buffer by replacing the function's call
               // and its arguments by the returned content (if a content was
               // specified)
-              if(typeof ret !== 'undefined')
+              if(typeof ret !== 'undefined') {
                 formatted = formatted.replace(/[a-zA-Z0-9_]+ *\($/, '') + ret;
-              // Else, just update the buffer by the standard way
-              // The problem is that this code is repeated 3 times, not
-              // according to the DRYS convention... But that would be
-              // complicated to solve this problem, or by adding a variable and
-              // conditions checking, which may reduces lisibility and makes
-              // the program a bit slower (invisible for humans, for slower)
-              else
-                formatted += parse.formatted + ')';
-            } else { // If no catcher was specified...
+                changedFormatting = true;
+              }
+            } else // If no catcher was specified...
               // Register this call into the 'unnative' list
               unnative.push({ name: called, args: parse });
-              // Update the formatted buffer
-              // We put this code after the 'else' because the added content is not
-              // the same if there was an event catcher or not
-              formatted += parse.formatted + ')';
-            }
           }
-        } else
+        }
+
+        // If the formatting was not changed by the previous block...
+        if(!changedFormatting)
           // Update the formatted buffer
-          // We put this code after the 'else' because the added content is not
-          // the same if that was a function call or not
           formatted += parse.formatted + ')';
 
         // Register the unnative calls between parenthesis
