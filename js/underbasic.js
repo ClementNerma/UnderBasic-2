@@ -854,6 +854,9 @@ const UnderBasic = (new (function() {
       // Here we know that's a plain expression
       // Its result will be stored by the interpreter to the "Ans" variable
       else {
+        // Is the expression an unnative 'void'-typed function call ?
+        let unnativeCall = false;
+
         // If this is a function called without parenthesis...
         if(match = line.match(/^([a-zA-Z][a-zA-Z0-9_]+)( +)([^\+\-\*\/\(].*)$/))
           // Change the line's syntax to add parenthesis
@@ -869,18 +872,22 @@ const UnderBasic = (new (function() {
           row --;
           // Insert the function's code
           lines = lines.slice(0, row + 1).concat(functionsContent[name].split('\n')).concat(lines.slice(row + 2));
+          // Indicates that an unnative 'void'-typed function was called
+          unnativeCall = true;
         });
 
         // If an error occured during the parsing...
         if(result.failed)
           return _formatError(line, result, null, row);
 
-        // Output
-        // If that's NOT an instruction...
-        if(!result.instruction)
-          output.push(result.formatted);
-        else // If that IS an instruction...
-          output.push(result.formatted.replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2'));
+        // Output only if the expression is not a unnative instruction call
+        if(!unnativeCall) {
+          // If that's NOT an instruction...
+          if(!result.instruction)
+            output.push(result.formatted);
+          else // If that IS an instruction...
+            output.push(result.formatted.replace(/^([a-zA-Z0-9_]+)\((.*)\)$/, '$1 $2'));
+        }
       }
     }
 
