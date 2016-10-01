@@ -221,7 +221,11 @@ const UnderBasic = (new (function() {
       parent = parent.substr(0, parent.length - 1);
 
     // Get the type
-    type = this.getType(content, true, variables, true);
+    type = this.getType(content, true, variables, !!expr);
+
+    // If the found type is 'number'...
+    if(type === 'number')
+      return (['expression', 'number', 'mixed']).includes(parent);
 
     // If a type was found...
     if(typeof type === 'string')
@@ -229,9 +233,14 @@ const UnderBasic = (new (function() {
       return type === parent || parent === 'mixed';
 
     // If the given variables is an expression object...
-    if(expr)
+    if(expr) {
+      // If the found type is 'number'...
+      if(expr.type === 'number')
+        return (['expression', 'number', 'mixed']).includes(parent);
+
       // Check the type
       return !expr.failed && (expr.type === parent || parent === 'mixed');
+    }
 
     // Parse the content
     let parse = this.parse(content);
@@ -239,6 +248,10 @@ const UnderBasic = (new (function() {
     if(parse.failed)
       // Failed !
       return false;
+
+    // If the found type is 'number'...
+    if(parse.type === 'number')
+      return (['expression', 'number', 'mixed']).includes(parse.type);
 
     // Here we have a successfully parsed content, we check its type...
     return (parse.type === parent || parent === 'mixed');
