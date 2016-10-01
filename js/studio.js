@@ -75,7 +75,7 @@ let result = CodeMirror($('#result').get(0), {
   styleActiveLine: true,
   lineNumbers: true,
   indentUnit: 2,
-  mode: 'basic'
+  mode: 'underbasic'
 });
 
 editor.on('change', (codemirror, change) => {
@@ -92,7 +92,7 @@ editor.on('change', (codemirror, change) => {
     localStorage.setItem('__underbasic_current_file', currentFile);
   }
 
-  let comp = UnderBasic.compile(code, files), mode = comp.failed ? 'text' : 'basic';
+  let comp = UnderBasic.compile(code, files), mode = comp.failed ? 'text' : 'underbasic';
 
   $('#result').css('border-color', comp.failed ? 'red' : 'lightgray');
 
