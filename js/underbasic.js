@@ -1212,7 +1212,7 @@ const UnderBasic = (new (function() {
         if(!buff && !p_type) {
           // The message changes if the operator is the auto-added '+' operator
           if(i === expr.length)
-            return error('S', 'Expecting for an expression afeter the last operator');
+            return error('S', 'Expecting for an expression after the last operator');
           else
             return error('S', 'Expecting for an expression before an operator');
         }
