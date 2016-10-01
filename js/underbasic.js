@@ -17,9 +17,10 @@ const UnderBasic = (new (function() {
     * @param {string} message
     * @param {object|number} [params] Parameters or column number
     * @param {number} [column]
+    * @param {number} [line] The error's line number
     * @returns {object}
     */
-  function _error(message, params = {}, column = 0) {
+  function _error(message, params = {}, column = 0, line = 0) {
     // If the parameters argument is a number...
     if(typeof params === 'number') {
       // Set it as the column
@@ -31,6 +32,7 @@ const UnderBasic = (new (function() {
     // Return the error
     return {
       column : column,
+      line   : line,
       message: message,
       failed : true,
       content: message.replace(/\$\{([a-zA-Z0-9_]+)\}/g, (match, name) => params[name])
@@ -42,9 +44,10 @@ const UnderBasic = (new (function() {
     * @param {string} line
     * @param {object} error
     * @param {number} [inc_col] Increase the column index
+    * @param {number} [overrideLine]
     * @returns {object} error
     */
-  function _formatError(line, obj, inc_col = 0) {
+  function _formatError(line, obj, inc_col = 0, overrideLine) {
     // Increase the column index
     obj.column += inc_col;
 
@@ -56,7 +59,7 @@ const UnderBasic = (new (function() {
     // parser calculates a wrong cursor position.
     let cursor = Math.max(obj.column < errorWidth ? obj.column : errorWidth, 0);
     // Set the new message
-    obj.content = `ERROR : At column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
+    obj.content = `ERROR : At line ${(overrideLine || obj.line) + 1}, column ${obj.column + 1} : \n\n${part}\n${' '.repeat(cursor)}^\n${' '.repeat(cursor)}${obj.content}`;
 
     // Return the final error object
     return obj;
@@ -471,7 +474,7 @@ const UnderBasic = (new (function() {
       * @returns {object}
       */
     function error(message, params, column) {
-      return _formatError(line, _error(message, params, column));
+      return _formatError(line, _error(message, params, column, row));
     }
 
     // Split code into lines
@@ -898,7 +901,7 @@ const UnderBasic = (new (function() {
         let result = this.parse(line, variables, functions);
         // If an error occured during the parsing...
         if(result.failed)
-          return _formatError(line, result);
+          return _formatError(line, result, null, row);
         // Output
         // If that's NOT an instruction...
         if(!result.instruction)
