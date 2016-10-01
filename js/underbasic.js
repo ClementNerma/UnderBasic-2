@@ -83,7 +83,7 @@ const UnderBasic = (new (function() {
 
   /** The types that doesn't support any operation (static types)
     * @type {array} */
-  const staticTypes = [ "picture", "gdb", "program", "appvar", "group", "application" ];
+  const staticTypes = [ "picture", "gdb", "program", "appvar", "group", "application", "void", "inst" ];
 
   /** The combinations
     * @type {array} */
