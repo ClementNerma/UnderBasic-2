@@ -861,7 +861,6 @@ const UnderBasic = (new (function() {
 
         // The result of the line's parsing
         let result = this.parse(line, variables, functions, null, (error, name, args) => {
-          return error('S', 'Unnative calls are not supported for the moment')
         });
 
         // If an error occured during the parsing...
