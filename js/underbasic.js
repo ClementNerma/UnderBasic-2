@@ -203,11 +203,12 @@ const UnderBasic = (new (function() {
     * Check if a content matches with a specific type (NOTE: Extended mode is forced)
     * @param {string} content
     * @param {string} parent
-    * @param {object} [variables] variables OR parsed expression
+    * @param {object} [variables] variables
+    * @param {object} [functions] functions
     * @param {object} [expr] The parsed expression
     * @returns {boolean} working
     */
-  this.match = (content, parent, variables, expr) => {
+  this.match = (content, parent, variables, functions, expr) => {
     // If the expected type is 'unref' (optionnal or not)...
     if(parent === 'unref' || parent === '[unref]')
       // Success !
@@ -493,12 +494,11 @@ const UnderBasic = (new (function() {
     let match = [];
 
     // For each line in the code...
-    for(line of lines) {
-      // Increase the row...
-      row ++;
-      // Trim the line
+    for(row = 0; row < lines.length; row++) {
+      // Get the current line,
+      // Trim it,
       // Remove a potential ';' symbol at the end of the line
-      line = line.trim().replace(/;+$/, '');
+      line = lines[row].trim().replace(/;+$/, '');
       // Remove commentaries
       line = line
               .replace(/\/\/(.*)$/, '')
@@ -525,7 +525,7 @@ const UnderBasic = (new (function() {
         // If it's no null...
         if(assign) {
           // Parse it
-          let parsed = this.parse(assign, variables, UBL.functions);
+          let parsed = this.parse(assign, variables, functions);
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -693,6 +693,195 @@ const UnderBasic = (new (function() {
         // Output
         output.push(format(rmspace(match[6], true)) + '->' + aliases[match[1]]);
       }
+      // If that's a function declaration...
+      else if(match = line.match(/^([a-zA-Z]+)( *)([a-zA-Z0-9_]+)( *)\((.*)\)( *)\{(.*)$/)) {
+        // If this function was already defined...
+        if(UBL.functions.hasOwnProperty(match[3]))
+          return error('Function name "${name}" is already used', { name: match[3] }, 8 + match[1].length + match[2].length);
+        // If that's a variable name...
+        if(variables.hasOwnProperty(match[3]))
+          return error('"${name}" is a variable name (${type})', { name: match[3], type: variables[match[3]] }, 8 + match[1].length + match[2].length);
+
+        if(!this.getType(match[3]).failed)
+          return error('"${name}" is a reserved name', { name: match[3] });
+
+        // The function's type
+        let type = match[1];
+
+        // Check the type...
+        // If that's "void" or "function"
+        if(type === 'function')
+          type = 'void';
+        // Allow "mixed" and "mixed*" types
+        else if(!(['void', 'mixed', 'mixed*']).includes(type)) {
+          // If that's a shorten type...
+          if(short_types.includes(type))
+            // Make it the real one
+            type = types[short_types.indexOf(type)];
+          else
+            // If that's not a known type...
+            if(!types.includes(type) && type !== 'mixed')
+              return error('Unknown type "${type}"', { type });
+        }
+
+        // All final arguments
+        let args = [], argsOut = [] /* contains a content like any native function */;
+
+        // If at least one argument is provided...
+        if(match[5].trim()) {
+          // Split the declaration's arguments
+          let parsed = match[5].split(',');
+          // Get the arguments' beginning position (for errors traceback)
+          let pos = 9 + match[1].length + match[2].length + match[3].length + match[4].length;
+
+          // For each given argument...
+          for(let i = 0; i < parsed.length; i++) {
+            // Get the current argument
+            let giv = parsed[i].trim(), arg = {};
+            // Define a local 'match' variable to don't erase the initial one
+            let match;
+
+            // Match its format
+            // e.g. name
+            if(match = giv.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/))
+              arg = {name: match[0], type: 'mixed'};
+            // e.g. number name
+            else if(match = giv.match(/^([a-zA-Z\*]+)( +)([a-zA-Z_][a-zA-Z0-9_]*)$/))
+              arg = {name: match[3], type: match[1]};
+            // e.g. [name]
+            else if(match = giv.match(/^\[( *)([a-zA-Z_][a-zA-Z0-9_]*) *\]$/))
+              arg = {name: match[2], type: 'mixed', optionnal: true};
+            // e.g. number [name]
+            else if(match = giv.match(/^([a-zA-Z\*]+)( +)\[( *)([a-zA-Z_][a-zA-Z0-9_]*) *\]$/))
+              arg = {name: match[1], type: match[4], optionnal: true};
+            // e.g. [name] = <default value>
+            else if(match = giv.match(/^\[( *)([a-zA-Z_][a-zA-Z0-9_]*)( *)\]( *)=( *)(.*)$/))
+              arg = {name: match[2], type: 'mixed', optionnal: true, defaultVal: match[6]};
+            // e.g. number [name] = <default value>
+            // NOTE: Here spaces are only optionnal because we know that the type
+            //       is separated from the name by the '[' character.
+            else if(match = giv.match(/^([a-zA-Z\*]+)( *)\[( *)([a-zA-Z_][a-zA-Z0-9_]*)( *)\]( *)=( *)(.*)$/))
+              arg = {name: match[4], type: match[1], optionnal: true, defaultVal: match[8]};
+            // Invalid syntax
+            else
+              return error('Invalid argument syntax', pos);
+
+            // The argument's type
+            // NOTE: The last asterisk is ignored
+            let type = arg.type.replace(/\*$/, '');
+
+            // Check the type...
+            // If that's a shorten type...
+            if(short_types.includes(type))
+              // Make it the real one
+              type = types[short_types.indexOf(type)];
+            else
+              // If that's not a known type...
+              if(!types.includes(type) && type !== 'mixed')
+                return error('Unknown type "${type}"', { type: arg.type });
+
+            // Forbid reserved names
+            if(!this.getType(arg.name, variables, functions).failed)
+              return error('${name} is a reserved name', { name: arg.name });
+
+            // Push the argument to the list...
+            args.push(arg);
+            // ...and add it to the final output
+            argsOut.push(arg.optionnal ? '[' + arg.type + ']' : arg.type);
+          }
+        }
+
+        // The sub-expression buffer
+        let _buff = match[7];
+        // The number of opened brackets
+        let openedB = 1;
+        // Was a quote opened ?
+        let openedQuote = false;
+        // Initialize the column index as 'i'
+        let i = -1;
+        // Backup the original row, because we'll override it soon
+        let org = row;
+        // Increase the line index one time
+        row ++;
+        // Get the current line
+        let line = lines[row];
+        // Initialize the current character
+        let char = '';
+
+        // While the matching closing bracket is not reached...
+        while((char !== '}' || openedB || openedQuote) && (row < lines.length)) {
+          // Increase the column index
+          i ++;
+
+          // Set the current character
+          char = line.charAt(i);
+
+          // Append the current char to the buffer
+          _buff += char;
+
+          // Quote
+          if(char === '"') {
+            // If there was an opened quote
+            if(openedQuote)
+              // Mark it as closed
+              openedQuote = false;
+            else
+              // Indicates that a quote was opened
+              openedQuote = true;
+          }
+
+          // If a quote is opened, ignore everything else
+          if(!openedQuote) {
+            // Opening bracket
+            if(char === '{')
+              // Increase the opened bracket counter
+              openedB ++;
+
+            // Closing bracket
+            if(char === '}')
+              // Decrease the opened bracket counter
+              openedB --;
+          }
+
+          // If we reached the end of the line...
+          if(i >= line.length - 1) {
+            // Increase the lines counter
+            row ++;
+            // Get the new line
+            line = lines[row];
+            // Add an '\n' to the buffer
+            _buff += '\n';
+            // Reset the column index
+            i = -1;
+            // Strings can be contained only on single lines...
+            openedQuote = false;
+          }
+        }
+
+        // If no bracket was encountered...
+        if(char !== '}') {
+          // NOTE: Here we put the cursor to the beginning of the not-closed
+          //       function
+          // Restore the original row...
+          row = org;
+          // ...and throw the error
+          return error('This function doesn\'t have an end', match[1].length + match[2].length);
+        }
+
+        // Remove the string's last character (it's the closing parenthesis)
+        // We also remove a potential '\n' at the end of the buffer, which can
+        // be caused if the final closing bracket is the last character of a
+        // line
+        if(_buff.substr(-1) === '\n') {
+          // Remove the character
+          _buff = _buff.replace(/\n$/, '');
+          // Decrease the row too
+          row --;
+        }
+
+        _buff = _buff.substr(0, _buff.length - 1);
+        console.log(_buff);
+      }
       // Here we know that's a plain expression
       // Its result will be stored by the interpreter to the "Ans" variable
       else {
@@ -702,7 +891,7 @@ const UnderBasic = (new (function() {
           line = match[1] + match[2] + '(' + match[3] + ')';
 
         // The result of the line's parsing
-        let result = this.parse(line, variables, UBL.functions);
+        let result = this.parse(line, variables, functions);
         // If an error occured during the parsing...
         if(result.failed)
           return _formatError(line, result);
@@ -997,7 +1186,7 @@ const UnderBasic = (new (function() {
         }
 
         // Get the buffer's type
-        let type = p_type || this.getType(buff, true, vars);
+        let type = p_type || this.getType(buff, vars, functions);
 
         // If the parse failed...
         if(type.failed) {
@@ -1170,7 +1359,7 @@ const UnderBasic = (new (function() {
           // For each argument...
           for(let i = 0; i < parse.length; i++) {
             // If the given argument doesn't match with the expected type...
-            if(!this.match(parse[i].plain, func[i + 1], vars, parse[i]))
+            if(!this.match(parse[i].plain, func[i + 1], vars, functions, parse[i]))
               return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
           }
         }
