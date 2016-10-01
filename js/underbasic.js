@@ -196,7 +196,7 @@ const UnderBasic = (new (function() {
     // Set he last parsed content (used to avoid infinite loops)
     last_parsed = content;
     // The parsed expression
-    let parsed = this.parse(content, variables, functions, null, _currentUnnativeCatcher);
+    let parsed = this.parse(content, variables, {}, functions, null, _currentUnnativeCatcher);
     // If that code is runned, that's not an infinite loop
     last_parsed = null;
     // If an error occured while parsing...
@@ -487,7 +487,7 @@ const UnderBasic = (new (function() {
         // If something is assigned...
         if(assign) {
           // Parse it
-          parsed = this.parse(assign, variables, functions, null, (error) => error('Unnative calls are not currently supported in variables declaration'));
+          parsed = this.parse(assign, variables, aliases, functions, null, (error) => error('Unnative calls are not currently supported in variables declaration'));
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -623,9 +623,9 @@ const UnderBasic = (new (function() {
         // The content's position in the string
         let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
         // First, we parse the given result...
-        let parsed = this.parse(match[6], variables, functions, null, (error) => error('Unnative calls not currently supported here'));
+        let parsed = this.parse(match[6], variables, aliases, functions, null, (error) => error('Unnative calls not currently supported here'));
         // The variable's type
-        let type = this.getType(match[6], variables, functions, parsed);
+        let type = this.getType(match[6], variables, aliases, functions, parsed);
 
         // If this type is not known...
         if(typeof type === 'object')
@@ -860,7 +860,7 @@ const UnderBasic = (new (function() {
           line = match[1] + match[2] + '(' + match[3] + ')';
 
         // The result of the line's parsing
-        let result = this.parse(line, variables, functions, null, (error, name, args) => {
+        let result = this.parse(line, variables, aliases, functions, null, (error, name, args) => {
         });
 
         // If an error occured during the parsing...
@@ -894,11 +894,12 @@ const UnderBasic = (new (function() {
     * Parse an expression
     * @param {string} expr
     * @param {object} [vars] Scope variables
+    * @param {object} [aliases] Aliases for variables names and definitions
     * @param {object} [functions] Scope functions
     * @param {string} [separator] Consider it the expression as a set of expressions, separated by a single character
     * @returns {object}
     */
-  this.parse = (expr, vars = {}, functions = {}, separator, unnativeCatcher) => {
+  this.parse = (expr, vars = {}, aliases = {}, functions = {}, separator, unnativeCatcher) => {
     /**
       * Generate an error object
       * @param {string} type The error's type, in one letter
@@ -1240,6 +1241,9 @@ const UnderBasic = (new (function() {
         if(staticType && alreadyOps)
           return error('S', 'Static type "${g_type}" does not support any operation', { g_type }, staticType === type ? i : passed);
 
+        if(aliases.hasOwnProperty(buff))
+          formatted = formatted.substr(0, formatted.lastIndexOf(buff)) + aliases[buff] + formatted.substr(formatted.lastIndexOf(buff) + buff.length);
+
         // Indicates that an operation occured
         alreadyOps = true;
         // Clear all variables
@@ -1248,7 +1252,7 @@ const UnderBasic = (new (function() {
         passed = 0;
         p_type = '';
         p_ends = false;
-
+        // Continue the loop
         continue ;
       } else if(composed_op) // If expecting a new part of an operator...
         // EXPL: Here the operator is set, so it must be a composed operator !
@@ -1345,7 +1349,7 @@ const UnderBasic = (new (function() {
         let changedFormatting = false;
 
         // Parse it
-        let parse = this.parse(_buff, vars, functions, called ? ',' : '', unnativeCatcher);
+        let parse = this.parse(_buff, vars, aliases, functions, called ? ',' : '', unnativeCatcher);
 
         // Catch parse errors
         if(parse.failed)
