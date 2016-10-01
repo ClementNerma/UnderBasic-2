@@ -30,8 +30,9 @@ const UnderBasic = (new (function() {
 
     // Return the error
     return {
-      column: column,
-      failed: true,
+      column : column,
+      message: message,
+      failed : true,
       content: message.replace(/\$\{([a-zA-Z0-9_]+)\}/g, (match, name) => params[name])
     };
   }
