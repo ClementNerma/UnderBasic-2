@@ -568,7 +568,7 @@ const UnderBasic = (new (function() {
           return error('Name "${name}" is already used for a native function', { name: match[3] }, match[1].length + match[2].length);
 
         // If this name is already used...
-        if(this.getType(match[3]))
+        if(!this.getType(match[3]).failed)
           return error('Name "${name}" is a reserved name', { name: match[3] }, match[1].length + match[2].length);
 
         // If a content is assigned and the type does not match...
