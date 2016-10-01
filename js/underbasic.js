@@ -107,25 +107,22 @@ const UnderBasic = (new (function() {
     name.match(/^Y[0-9]$/) ? 'yvar' :
     name.match(/^Pic[0-9]$/) ? 'picture' :
     name.match(/^GDB[0-9]$/) ? 'gdb' :
-    // Extended types
-    extended ?
     name.match(/^prgm[A-Z0-9]{1,8}$/) ? 'program' :
     name.match(/^appv[A-Z0-9]{1,8}$/) ? 'appvar' :
     name.match(/^group[A-Z0-9]{1,8}$/) ? 'group' :
     name.match(/^app[A-Z0-9]{1,8}$/) ? 'application' :
-    null : null;
+    null;
 
   /**
     * Get the type of a given content
     * @param {string} content
-    * @param {boolean} [extended] Allow extended types
     * @param {object} [variables] Search through a set of variables
     * @param {boolean} [dontParse] Do not parse the expression to increase the speed
     * @returns {string|object} type Error object if the type is unknown
     */
-  this.getType = (content, extended, variables = {}, dontParse = false) => {
+  this.getType = (content, variables = {}, functions = {}, dontParse = false) => {
     // Type get using @getVarType
-    let type = this.getVarType(content, extended);
+    let type = this.getVarType(content);
     // If the type was detected...
     if(type)
       // Return it
@@ -154,7 +151,7 @@ const UnderBasic = (new (function() {
       // For each item...
       for(let i = 0; i < list.length; i++) {
         // If that's not a number...
-        if(this.getType(list[i], extended, variables) !== 'number')
+        if(this.getType(list[i], variables, functions) !== 'number')
           // Failed
           return _error('All items in a list must be numbers', list.slice(0, i).length);
       }
@@ -192,7 +189,7 @@ const UnderBasic = (new (function() {
     // Set he last parsed content (used to avoid infinite loops)
     last_parsed = content;
     // The parsed expression
-    let parsed = this.parse(content, variables, UBL.functions);
+    let parsed = this.parse(content, variables, functions);
     // If that code is runned, that's not an infinite loop
     last_parsed = null;
     // If an error occured while parsing...
@@ -251,7 +248,7 @@ const UnderBasic = (new (function() {
       parent = parent.substr(0, parent.length - 1);
 
     // Get the type
-    type = this.getType(content, true, variables, !!expr);
+    type = this.getType(content, variables, functions, !!expr);
 
     // If the found type is 'number'...
     if(type === 'number')
@@ -349,7 +346,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the row\'s end', col);
 
         // If the buffer is not a number...
-        if(typeof this.getType(buff.trim(), variables) === 'object')
+        if(typeof this.getType(buff.trim(), variables, functions) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.replace(/^ +/, '').length);
 
         // Push the item to the collection
@@ -381,7 +378,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the separator', col);
 
         // If the buffer is not a number...
-        if(typeof this.getType(buff, variables) === 'object')
+        if(typeof this.getType(buff, variables, functions) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.length);
 
         // Push the item to the collection
@@ -491,9 +488,9 @@ const UnderBasic = (new (function() {
     // Output
     let output = [];
     // The current line's content (must be global to be read by formatError)
-    let line;
+    let line = '';
     // A temporary variable for storing regex matches
-    let match;
+    let match = [];
 
     // For each line in the code...
     for(line of lines) {
@@ -661,7 +658,7 @@ const UnderBasic = (new (function() {
         // The content's position in the string
         let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
         // The variable's type
-        let type = this.getType(match[6], null, variables);
+        let type = this.getType(match[6], variables, functions);
 
         // If this type is not known...
         if(typeof type === 'object')
