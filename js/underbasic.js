@@ -1219,7 +1219,7 @@ const UnderBasic = (new (function() {
         // If an instruction was specified...
         // (Because g_type is defined we know that some operations already occured
         // before)
-        if(g_type === 'void' || type === 'void')
+        if(g_type === 'void' || (alreadyOps && type === 'void'))
           return error('S', 'Can\'t do operations on instructions', passed);
 
         // If no global type was defined - if that's not a number
