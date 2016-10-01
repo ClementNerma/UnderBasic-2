@@ -861,6 +861,14 @@ const UnderBasic = (new (function() {
 
         // The result of the line's parsing
         let result = this.parse(line, variables, aliases, functions, null, (error, name, args) => {
+          // For the moment, only the custom instructions are supported
+          if(functions[name][0] !== 'void')
+            return error('S', 'Sorry, only instructions are currently supported');
+
+          // Decrease the row number
+          row --;
+          // Insert the function's code
+          lines = lines.slice(0, row + 1).concat(functionsContent[name].split('\n')).concat(lines.slice(row + 2));
         });
 
         // If an error occured during the parsing...
