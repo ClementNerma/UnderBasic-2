@@ -973,13 +973,16 @@ const UnderBasic = (new (function() {
       */
     function buildReturn(forceClassic = false) {
       // If the expression was composed of a set...
-      if(separator && !forceClassic)
-        // Return the set
+      if(separator && !forceClassic) {
+        // Attach the 'unnative' data to the set...
+        set.unnativeCalls = unnative;
+        // ...and return it
         return set;
-      else // If that was a standard expression...
+      } else // If that was a standard expression...
         return {
           type: g_type || 'number',
-          static: !!(staticType)
+          static: !!(staticType),
+          unnativeCalls: unnative
         };
     }
 
@@ -1027,6 +1030,8 @@ const UnderBasic = (new (function() {
     let i = 0;
     // Was any operation performed before ?
     let alreadyOps = false;
+    // Non-native functions calls
+    let unnative = [];
 
     // === For expressions set only ===
     // The expression set
@@ -1389,7 +1394,14 @@ const UnderBasic = (new (function() {
             if(!this.match(parse[i].plain, func[i + 1], vars, functions, parse[i]))
               return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
           }
+
+          // If this function is not a native one, register this call into the
+          // 'unnative' list
+          unnative.push({ name: called, args: parse });
         }
+
+        // Register the unnative calls between parenthesis
+        unnative = unnative.concat(parse.unnativeCalls);
 
         // Define the type of the part
         p_type = called ? functions[called][0] : parse.type;
