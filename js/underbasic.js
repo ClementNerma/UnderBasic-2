@@ -411,62 +411,6 @@ const UnderBasic = (new (function() {
     */
   this.compile = (code) => {
     /**
-      * Format a content using built variables
-      * @param {string} content
-      * @returns {string} formatted
-      */
-    function format(content) {
-      // The output string
-      let out = '';
-      // Characters passed since the beginning
-      let passed = 0;
-      // Split by space, ignoring spaces between quotes
-      let parts = content.match(/[^"]+|"(?:\\"|[^"])+"/g);
-
-      // For each part...
-      for(let part of parts) {
-        // If that's a part NOT between quotes
-        if(!part.startsWith('"'))
-          // Format it
-          out += part.replace(/\b([a-zA-Z0-9_]+)\b/g, (match, word) => variables.hasOwnProperty(word) ? aliases[word] || word : word);
-        else
-          out += part;
-
-        passed += part.length + 1;
-      }
-
-      // Return the formatted string
-      return out;
-    }
-
-    /**
-      * Remove all spaces outside quotes
-      * @param {string} str
-      * @param {boolean} [allowCombinations] ALlow combinations
-      * @returns {string} str
-      */
-    function rmspace(str, allowCombinations = false) {
-      if(!allowCombinations)
-        return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => $1 ? $1.replace(/ /g, '') : $2);
-
-      return str.replace(/([^"]+)|("[^"]+")/g, ($0, $1, $2) => {
-        if(!$1)
-          return $2
-
-        if(combinations.includes($1.trim()))
-          return $1;
-
-        return $1
-          .replace(/"[^"]+" +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
-          .replace(/"[^"]+" +(and|or|xor) +([a-zA-Z0-9_])/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
-          .replace(/([a-zA-Z0-9]+) +(and|or|xor) +"[^"]+"/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
-          .replace(/[a-zA-Z0-9]+ +(and|or|xor) +[a-zA-Z0-9_]/g, $0 => $0.replace(/ /g, String.fromCharCode(160))) // Backup all spaces by turning them into non-breaking spaces
-          .replace(/ /g, '') // Remove all (other) spaces
-          .replace(new RegExp(String.fromCharCode(160), 'g'), ' ') // Restore all spaces
-      });
-    }
-
-    /**
       * Return an error object
       * @param {string} message
       * @param {object|number} [params] Parameters or column number
@@ -666,8 +610,10 @@ const UnderBasic = (new (function() {
 
         // The content's position in the string
         let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
+        // First, we parse the given result...
+        let parsed = this.parse(match[6], variables, functions);
         // The variable's type
-        let type = this.getType(match[6], variables, functions);
+        let type = this.getType(match[6], variables, functions, parsed);
 
         // If this type is not known...
         if(typeof type === 'object')
@@ -700,7 +646,7 @@ const UnderBasic = (new (function() {
           /* looking for an operator, if there is one content must be between parenthesis. The '+' operator doesn't need a parenthesis */
 
         // Output
-        output.push(format(rmspace(match[6], true)) + '->' + aliases[match[1]]);
+        output.push(parsed.formatted + '->' + aliases[match[1]]);
       }
       // If that's a function declaration...
       else if(match = line.match(/^([a-zA-Z]+)( *)([a-zA-Z0-9_]+)( *)\((.*)\)( *)\{(.*)$/)) {
