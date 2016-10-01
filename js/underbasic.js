@@ -678,7 +678,7 @@ const UnderBasic = (new (function() {
         // Check the type...
         // If that's "void" or "function"
         if(type === 'function')
-          type = 'void';
+          match[1] = 'void';
         // Allow "mixed" and "mixed*" types
         else if(!(['void', 'mixed', 'mixed*']).includes(type)) {
           // If that's a shorten type...
