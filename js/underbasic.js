@@ -127,7 +127,7 @@ const UnderBasic = (new (function() {
     * @param {boolean} [dontParse] Do not parse the expression to increase the speed
     * @returns {string|object} type Error object if the type is unknown
     */
-  this.getType = (content, variables = {}, functions = {}, dontParse = false) => {
+  this.getType = (content, variables = {}, aliases = {}, functions = {}, dontParse = false) => {
     // Type get using @getVarType
     let type = this.getVarType(content);
     // If the type was detected...
@@ -158,7 +158,7 @@ const UnderBasic = (new (function() {
       // For each item...
       for(let i = 0; i < list.length; i++) {
         // If that's not a number...
-        if(this.getType(list[i], variables, functions) !== 'number')
+        if(this.getType(list[i], variables, aliases, functions) !== 'number')
           // Failed
           return _error('All items in a list must be numbers', list.slice(0, i).length);
       }
@@ -196,7 +196,7 @@ const UnderBasic = (new (function() {
     // Set he last parsed content (used to avoid infinite loops)
     last_parsed = content;
     // The parsed expression
-    let parsed = this.parse(content, variables, {}, functions, null, _currentUnnativeCatcher);
+    let parsed = this.parse(content, variables, aliases, functions, null, _currentUnnativeCatcher);
     // If that code is runned, that's not an infinite loop
     last_parsed = null;
     // If an error occured while parsing...
@@ -211,11 +211,12 @@ const UnderBasic = (new (function() {
     * @param {string} content
     * @param {string} parent
     * @param {object} [variables] variables
+    * @param {object} [aliases] aliases
     * @param {object} [functions] functions
     * @param {object} [expr] The parsed expression
     * @returns {boolean} working
     */
-  this.match = (content, parent, variables, functions, expr) => {
+  this.match = (content, parent, variables, aliases, functions, expr) => {
     // If the expected type is 'unref' (optionnal or not)...
     if(parent === 'unref' || parent === '[unref]')
       // Success !
@@ -256,7 +257,7 @@ const UnderBasic = (new (function() {
       parent = parent.substr(0, parent.length - 1);
 
     // Get the type
-    type = this.getType(content, variables, functions, !!expr);
+    type = this.getType(content, variables, aliases, functions, !!expr);
 
     // If the found type is 'number'...
     if(type === 'number')
@@ -296,9 +297,11 @@ const UnderBasic = (new (function() {
     * Parse a plain matrix to an bi-dimensionnal array
     * @param {string} content
     * @param {object} [variables] The scope's variables
+    * @param {object} [aliases] The scope's aliases set
+    * @param {object} [functions] The scope's functions
     * @returns {array|object} matrix Object is an error occured
     */
-  this.parseMatrix = (content, variables) => {
+  this.parseMatrix = (content, variables, aliases, functions) => {
     // If the opening bracket is missing...
     if(!content.startsWith('['))
       return _error('Missing opening bracket for matrix');
@@ -354,7 +357,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the row\'s end', col);
 
         // If the buffer is not a number...
-        if(typeof this.getType(buff.trim(), variables, functions) === 'object')
+        if(typeof this.getType(buff.trim(), variables, aliases, functions) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.replace(/^ +/, '').length);
 
         // Push the item to the collection
@@ -386,7 +389,7 @@ const UnderBasic = (new (function() {
           return _error('No number specified before the separator', col);
 
         // If the buffer is not a number...
-        if(typeof this.getType(buff, variables, functions) === 'object')
+        if(typeof this.getType(buff, variables, aliases, functions) === 'object')
           return _error('All matrix\'s items must be numbers', col - buff.length);
 
         // Push the item to the collection
@@ -1234,7 +1237,7 @@ const UnderBasic = (new (function() {
         }
 
         // Get the buffer's type
-        let type = p_type || this.getType(buff, vars, functions);
+        let type = p_type || this.getType(buff, vars, aliases, functions);
 
         // If the parse failed...
         if(type.failed) {
