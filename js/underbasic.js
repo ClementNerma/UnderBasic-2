@@ -440,6 +440,8 @@ const UnderBasic = (new (function() {
     let functions = { '$$': true };
     // The content of all functions
     let functionsContent = {};
+    // The arguments of all functions
+    let functionsArguments = {};
     // Declared variables
     let variables = { theta: 'number', e: 'number', pi: 'number', n: 'number', i: 'number', answer: 'mixed' };
     // Aliases (linked to variables)
@@ -853,6 +855,8 @@ const UnderBasic = (new (function() {
         functions[match[3]] = [match[1]].concat(argsOut);
         // Store the function's content
         functionsContent[match[3]] = _buff.substr(0, _buff.length - 1);
+        // Store the argument's names
+        functionsArguments[match[3]] = args;
       }
       // Here we know that's a plain expression
       // Its result will be stored by the interpreter to the "Ans" variable
