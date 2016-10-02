@@ -1198,6 +1198,26 @@ const UnderBasic = (new (function() {
         if(composed_op)
           return error('S', 'Expecting for the second part of a composed operator ${op}', { op: op + op });
 
+        // If the buffer refers to an alias...
+        if(aliases.hasOwnProperty(buff)) {
+          // Format the expression
+          expr =
+            expr.substr(0, i - buff.length) + /* "2 + " */
+            aliases[buff] + /* "<lol>" */
+            expr.substr(i) /*  + 2 */
+
+          // TODO: It only supports single-char operators, fix it !
+          // Change the formatted content by removing its last part
+          formatted = formatted.substr(0, formatted.length - 1  - buff.length);
+
+          // Put the column index on the beginning of the alias
+          i -= buff.length + 1;
+          // Reset the buffer
+          buff = '';
+          // Continue the loop
+          continue ;
+        }
+
         // Set the operator
         op += char;
 
@@ -1257,9 +1277,6 @@ const UnderBasic = (new (function() {
         // Static types doesn't support any kind of operation
         if(staticType && alreadyOps)
           return error('S', 'Static type "${g_type}" does not support any operation', { g_type }, staticType === type ? i : passed);
-
-        if(aliases.hasOwnProperty(buff))
-          formatted = formatted.substr(0, formatted.lastIndexOf(buff)) + aliases[buff] + formatted.substr(formatted.lastIndexOf(buff) + buff.length);
 
         // Indicates that an operation occured
         alreadyOps = true;
