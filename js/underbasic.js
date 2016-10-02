@@ -726,7 +726,7 @@ const UnderBasic = (new (function() {
               arg = {name: match[2], type: 'mixed', optionnal: true};
             // e.g. number [name]
             else if(match = giv.match(/^([a-zA-Z\*]+)( +)\[( *)([a-zA-Z_][a-zA-Z0-9_]*) *\]$/))
-              arg = {name: match[1], type: match[4], optionnal: true};
+              arg = {name: match[4], type: match[1], optionnal: true};
             // e.g. [name] = <default value>
             else if(match = giv.match(/^\[( *)([a-zA-Z_][a-zA-Z0-9_]*)( *)\]( *)=( *)(.*)$/))
               arg = {name: match[2], type: 'mixed', optionnal: true, defaultVal: match[6]};
