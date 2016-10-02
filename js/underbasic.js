@@ -1223,13 +1223,14 @@ const UnderBasic = (new (function() {
         if(aliases.hasOwnProperty(buff)) {
           // Format the expression
           expr =
-            expr.substr(0, i - buff.length) + /* "2 + " */
+            expr.substr(0, i - buff.length + 1) + /* "2 + " */
             aliases[buff] + /* "<lol>" */
-            expr.substr(i) /*  + 2 */
+            expr.substr(i + 1) /*  + 2 */
 
           // TODO: It only supports single-char operators, fix it !
           // Change the formatted content by removing its last part
-          formatted = formatted.substr(0, formatted.length - 1  - buff.length);
+          formatted = formatted.replace(/(,|\+)*$/, '')
+          formatted = formatted.substr(0, formatted.length - buff.length);
 
           // Put the column index on the beginning of the alias
           i -= buff.length + 1;
