@@ -1415,9 +1415,6 @@ const UnderBasic = (new (function() {
           // The expression was parsed using the comma separator
           // Now we'll check if the call is valid.
 
-          // If arguments are missing...
-          if(parse.length < func.length - 1)
-            return error('A', 'Missing ${num} argument(s) for function "${called}"', { num: func.length - parse.length - 1, called }, begins);
           // If there are too many arguments...
           if(parse.length >= func.length) {
             // Show a different error message if the function doesn't requires any
@@ -1430,12 +1427,20 @@ const UnderBasic = (new (function() {
 
           // Check all arguments
           // For each argument...
-          for(let i = 0; i < parse.length; i++) {
-            // If the given argument doesn't match with the expected type...
-            if(!this.match(parse[i].plain, func[i + 1], vars, aliases, functions, parse[i]))
-              return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
+          for(let i = 1; i < func.length; i++) {
+            // If the argument is missing in the call...
+            if(parse.length < i) {
+              // If the argument wasn't optionnal...
+              if(!func[i].startsWith('['))
+                return error('A', 'Missing ${num} argument(s) for function "${called}"', { num: func.length - parse.length - 1, called }, begins);
+              // Else, we don't check it because it's not specified
+            } else
+              // If the given argument doesn't match with the expected type...
+              if(!this.match(parse[i - 1].plain, func[i], vars, aliases, functions, parse[i - 1]))
+                return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i], given: parse[i - 1].type }, begins - parse[i - 1].fromStartWithoutSpaces);
           }
 
+          // If the called function is not a native one...
           if(!UBL.functions.hasOwnProperty(called)) {
             // If this function is not a native one...
             // We first call event catcher (if specified)
