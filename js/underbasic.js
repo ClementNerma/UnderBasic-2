@@ -124,6 +124,7 @@ const UnderBasic = (new (function() {
     * Get the type of a given content
     * @param {string} content
     * @param {object} [variables] Search through a set of variables
+    * @param {object} [aliases] Use a set of aliases for parsing
     * @param {boolean} [dontParse] Do not parse the expression to increase the speed
     * @returns {string|object} type Error object if the type is unknown
     */
@@ -445,7 +446,7 @@ const UnderBasic = (new (function() {
     // Declared variables
     let variables = { theta: 'number', e: 'number', pi: 'number', n: 'number', i: 'number', answer: 'mixed' };
     // Aliases (linked to variables)
-    let aliases = { theta: 'theta' };
+    let aliases = [{ theta: 'theta' }];
     // Used aliases (for variables)
     let used = { real: 0, str: 0, list: 0, matrix: 0, yvar: 0, pic: 0, gdb: 0 };
     // Output
@@ -492,7 +493,7 @@ const UnderBasic = (new (function() {
         // If something is assigned...
         if(assign) {
           // Parse it
-          parsed = this.parse(assign, variables, aliases, functions, null, (error) => error('Unnative calls are not currently supported in variables declaration'));
+          parsed = this.parse(assign, variables, aliases[aliases.length - 1], functions, null, (error) => error('Unnative calls are not currently supported in variables declaration'));
           // If an error occured...
           if(parsed.failed)
             return _formatError(line, parsed, match[1].length + match[2].length + match[3].length + shift);
@@ -614,7 +615,7 @@ const UnderBasic = (new (function() {
         }
 
         // Allocate the new alias
-        aliases[match[3]] = alias;
+        aliases[aliases.length - 1][match[3]] = alias;
         // If a value was assigned, output it
         if(assign)
           output.push(parsed.formatted + '->' + alias);
@@ -628,9 +629,9 @@ const UnderBasic = (new (function() {
         // The content's position in the string
         let pos = match[1].length + match[2].length + match[3].length + match[4].length + match[5].length + 1;
         // First, we parse the given result...
-        let parsed = this.parse(match[6], variables, aliases, functions, null, (error) => error('Unnative calls not currently supported here'));
+        let parsed = this.parse(match[6], variables, aliases[aliases.length - 1], functions, null, (error) => error('Unnative calls not currently supported here'));
         // The variable's type
-        let type = this.getType(match[6], variables, aliases, functions, parsed);
+        let type = this.getType(match[6], variables, aliases[aliases.length - 1], functions, parsed);
 
         // If this type is not known...
         if(typeof type === 'object')
@@ -753,7 +754,7 @@ const UnderBasic = (new (function() {
                 return error('Unknown type "${type}"', { type: arg.type });
 
             // Forbid reserved names
-            if(!this.getType(arg.name, variables, functions).failed)
+            if(!this.getType(arg.name, variables, aliases, functions).failed)
               return error('${name} is a reserved name', { name: arg.name });
 
             // Push the argument to the list...
@@ -870,7 +871,7 @@ const UnderBasic = (new (function() {
           line = match[1] + match[2] + '(' + match[3] + ')';
 
         // The result of the line's parsing
-        let result = this.parse(line, variables, aliases, functions, null, (error, name, args) => {
+        let result = this.parse(line, variables, aliases[aliases.length - 1], functions, null, (error, name, args) => {
           // For the moment, only the custom instructions are supported
           if(functions[name][0] !== 'void')
             return error('S', 'Sorry, only instructions are currently supported');
@@ -881,6 +882,19 @@ const UnderBasic = (new (function() {
           lines = lines.slice(0, row + 1).concat(functionsContent[name].split('\n')).concat(lines.slice(row + 2));
           // Indicates that an unnative 'void'-typed function was called
           unnativeCall = true;
+          // === Make the new aliases set ===
+          // Copy the old set
+          // For that, we use the first set, for two reasons :
+          // - A function may not access to the arguments of a previous function
+          // - If a function overrides the aliases and call another function,
+          //   this one will access to different aliases without knowing they
+          //   changed
+          let newAliases = JSON.parse(JSON.stringify(aliases[0]));
+          // Attach the value of all arguments
+          for(let i = 0; i < args.length; i++)
+            newAliases[functionsArguments[name][i].name] = args[i].formatted;
+          // Put the new aliases into the collection
+          aliases.push(newAliases);
         });
 
         // If an error occured during the parsing...
@@ -1418,7 +1432,7 @@ const UnderBasic = (new (function() {
           // For each argument...
           for(let i = 0; i < parse.length; i++) {
             // If the given argument doesn't match with the expected type...
-            if(!this.match(parse[i].plain, func[i + 1], vars, functions, parse[i]))
+            if(!this.match(parse[i].plain, func[i + 1], vars, aliases, functions, parse[i]))
               return error('T', 'Expecting a "${expected}", "${given}" given', { expected: func[i + 1], given: parse[i].type }, begins - parse[i].fromStartWithoutSpaces);
           }
 
