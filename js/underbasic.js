@@ -1828,3 +1828,6 @@ Array.prototype.last = function() {
 
 // Debug function
 const d = e => console.log(JSON.parse(JSON.stringify(e)));
+
+// Node.js export
+module.exports = { UnderBasic, UBL };
