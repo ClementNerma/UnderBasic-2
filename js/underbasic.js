@@ -65,6 +65,20 @@ const UnderBasic = (new (function() {
     return obj;
   }
 
+  /**
+    * Get the date at an instant
+    * @return {number}
+    */
+  function _getTimestamp() {
+    if(typeof window === 'object' && 'performance' in window && 'now' in window.performance)
+      return window.performance.now();
+
+    if(typeof process === 'object' && 'hrtime' in process)
+      return process.hrtime()[0] * 1000 + process.hrtime()[1] / 1000000;
+
+    return Date.now(); // Not a very sure way
+  }
+
   /** The known types
     * @type {array} */
   const types = [ "number", "string", "list", "matrix", "yvar", "picture", "gdb" ];
@@ -429,6 +443,8 @@ const UnderBasic = (new (function() {
       return _formatError(line, _error(message, params, column, row));
     }
 
+    // Memorize the timestamp at the beginning of the compilation
+    let at_start = _getTimestamp();
     // Split code into lines
     let lines = code.split('\n');
     // Number of the line
@@ -918,7 +934,8 @@ const UnderBasic = (new (function() {
       // Build trash
       vars: variables,
       func: functions,
-      aliases
+      aliases,
+      duration: Math.floor((_getTimestamp() - at_start) * 1000) / 1000
     };
   };
 
