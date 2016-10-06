@@ -41,10 +41,10 @@ const UnderBasic = (new (function() {
 
   /**
     * Format an error object to be compatible with compiler's context
-    * @param {string} line
+    * @param {string} line The line's content
     * @param {object} error
     * @param {number} [inc_col] Increase the column index
-    * @param {number} [overrideLine]
+    * @param {number} [overrideLine] Change the line's number
     * @returns {object} error
     */
   function _formatError(line, obj, inc_col = 0, overrideLine) {
@@ -962,6 +962,7 @@ const UnderBasic = (new (function() {
       err.parse_type    = type;
       err.parse_message = msg;
       err.parse_errvars = (typeof sub === 'object' ? sub : {});
+      err.parse_state   = expr;
 
       // Return the object
       return err;
@@ -1221,23 +1222,8 @@ const UnderBasic = (new (function() {
 
         // If the buffer refers to an alias...
         if(aliases.hasOwnProperty(buff)) {
-          // Format the expression
-          expr =
-            expr.substr(0, i - buff.length + 1) + /* "2 + " */
-            aliases[buff] + /* "<lol>" */
-            expr.substr(i + 1) /*  + 2 */
-
-          // TODO: It only supports single-char operators, fix it !
-          // Change the formatted content by removing its last part
-          formatted = formatted.replace(/(,|\+)*$/, '')
-          formatted = formatted.substr(0, formatted.length - buff.length);
-
-          // Put the column index on the beginning of the alias
-          i -= buff.length + 1;
-          // Reset the buffer
-          buff = '';
-          // Continue the loop
-          continue ;
+          formatted = formatted.substr(0, formatted.lastIndexOf(buff)) + aliases[buff] + formatted.substr(formatted.lastIndexOf(buff) + buff.length);
+          buff = aliases[buff];
         }
 
         // Set the operator
